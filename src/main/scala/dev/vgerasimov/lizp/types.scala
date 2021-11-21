@@ -1,5 +1,7 @@
 package dev.vgerasimov.lizp
 
+case class Id(v: String)
+
 sealed trait Expr
 
 case object LUnit extends Expr
@@ -12,7 +14,7 @@ case class LDouble(v: Double) extends Expr
 
 type LazyExpr = () => Expr
 
-case class Id(v: String)
+case class EList(v: List[Expr]) extends Expr
 
 case class Lambda(
   params: List[Id], 

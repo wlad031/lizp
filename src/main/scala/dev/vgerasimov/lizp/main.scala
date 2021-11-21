@@ -4,11 +4,13 @@ package dev.vgerasimov.lizp
 
   val source =
     """|(val x () (println "x") 69)
+       |(val ls (list 1 2 3))
        |(def lol () (val s "y") (val x 420) (println (s)) (x))
        |(def mult (a b)
        |  (def f (x acc)
        |    (if (>= (x) (a)) (acc) (f (+ 1 (x)) (+ (b) (acc)))))
        |  (f 0 0))
+       |(println (ls))
        |(println "hello")
        |(mult 10 (lol))
        |""".stripMargin

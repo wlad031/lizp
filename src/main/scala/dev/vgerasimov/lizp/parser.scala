@@ -18,6 +18,10 @@ object Parser:
 
   private val lStr: P[LStr] = (P("\"") ~ until(P("\"")).! ~ P("\"")).map(LStr(_))
 
+  private val eList: P[EList] = 
+    P(P('(') ~~ P("list") ~ (ws1 ~ expr).+ ~~ P(')'))
+      .map(exprs => EList(exprs))
+
   private val func: P[Func] =
     val params: P[List[Id]] = P('(') ~ (wss ~ id.rep(sep = ws1)).?.map(_.getOrElse(Nil)) ~ P(')')
     P(P('(') ~~ P("def") ~-~ id ~-~ params ~ (ws1 ~ expr).+ ~~ P(')'))
@@ -33,7 +37,7 @@ object Parser:
     })
 
   private val expr: P[Expr] =
-    P(choice(lNull, lUnit, lBool, lInt, lDouble, lStr, func, const, call))
+    P(choice(lNull, lUnit, lBool, lInt, lDouble, lStr, eList, func, const, call))
 
   def apply(string: String): ParsingError | List[Expr] = (wss ~ expr.rep(sep = ws1) ~~ end)(string) match
     case POut.Success(v, _, _, _) => v

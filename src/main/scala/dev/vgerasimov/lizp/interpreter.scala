@@ -8,12 +8,14 @@ def eval(ctx: Context)(scope: Map[Id, Const | Func], exprs: LazyExpr*): List[Exp
   scope.foreach { case (n, d) => localScope.put(n, d) }
 
   exprs.toList.map(f => f()).flatMap {
-    case v @ LNull   => List(v)
-    case v @ LUnit   => List(v)
-    case v: LBool => List(v)
-    case v: LInt     => List(v)
-    case v: LDouble  => List(v)
-    case v: LStr  => List(v)
+    case v @ LNull  => List(v)
+    case v @ LUnit  => List(v)
+    case v: LBool   => List(v)
+    case v: LInt    => List(v)
+    case v: LDouble => List(v)
+    case v: LStr    => List(v)
+    case EList(exprs) =>
+      List(EList(eval(ctx)(localScope.toMap, exprs.map(expr => () => expr)*)))
     case d @ Func(name, _, _) =>
       localScope.put(name, d)
       List(LUnit)
@@ -31,7 +33,9 @@ def eval(ctx: Context)(scope: Map[Id, Const | Func], exprs: LazyExpr*): List[Exp
         case definition: Func =>
           val evaluatedArgs: List[LazyExpr] = args.map(arg => () => eval(ctx)(newScope, arg).last)
           val captures: Map[Id, Const | Func] =
-            (definition.params zip evaluatedArgs).map({ case (param, lazyFunc) => (param, Const(param, List(lazyFunc))) }).toMap
+            (definition.params zip evaluatedArgs).map { case (param, lazyFunc) =>
+              (param, Const(param, List(lazyFunc)))
+            }.toMap
           eval(ctx)(newScope ++ captures, definition.func(evaluatedArgs)*)
   }
 
@@ -73,25 +77,23 @@ class Context:
       List(Id("cond"), Id("then"), Id("else")),
       ls => List(if (ls(0)().asInstanceOf[LBool].v) ls(1) else ls(2))
     ),
-    Id("println") -> Func(
-      Id("println"),
-      List(Id("args")),
-      ls => {
-        ls.foreach { arg =>
-          {
-            arg() match {
-              case LNull   => System.out.print("null")
-              case LUnit       => System.out.print("()")
-              case LBool(x) => System.out.print(x)
-              case LInt(x)  => System.out.print(x)
-              case LDouble(x)  => System.out.print(x)
-              case LStr(x)  => System.out.print(x)
-            }
-            System.out.print(" ")
-          }
+    Id("println") -> {
+      def f(expr: Expr): Unit = expr match
+        case LNull      => print("null")
+        case LUnit      => print("()")
+        case LBool(x)   => print(x)
+        case LInt(x)    => print(x)
+        case LDouble(x) => print(x)
+        case LStr(x)    => print(x) 
+        case EList(ls)  => print("("); ls.foreach(x => { f(x); print(", ")} ); print(")")
+      Func(
+        Id("println"),
+        List(Id("args")),
+        ls => {
+          ls.foreach { arg => f(arg()) }
+          System.out.println()
+          List(() => LUnit)
         }
-        System.out.println()
-        List(() => LUnit)
-      }
-    )
+      )
+    }
   )
