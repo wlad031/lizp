@@ -60,16 +60,16 @@ def eval(scopes: Scopes, expressions: List[Expr]): Either[ExecutionError, List[E
         eval(localScope :: scopes, List(condition))
           .map(_.last)
           .flatMap({
-            case LUnit | LNull  => false.asRight
-            case LBool(cond)    => cond.asRight
-            case LInt(value)    => (value != 0).asRight
-            case LDouble(value) => (value != 0.0d).asRight
-            case LStr(value)    => (value.isEmpty).asRight
-            case _              => ExecutionError.WrongArgumentTypes(null, null).asLeft
+            case LUnit | LNull => false.asRight
+            case LBool(cond)   => cond.asRight
+            case LNum(value)   => (value != 0.0d).asRight
+            case LStr(value)   => (value.isEmpty).asRight
+            case _             => ExecutionError.WrongArgumentTypes(null, null).asLeft
           })
           .flatMap(condition => eval(localScope :: scopes, List(if (condition) thenExpr else elseExpr)))
           .map(_.last)
       case unsafe: Unsafe =>
+        // quite non-functional mutable operations
         import scala.util.control.Breaks.*
         unsafe match
           case While(condition, sideEffects) =>
@@ -98,33 +98,28 @@ def eval(scopes: Scopes, expressions: List[Expr]): Either[ExecutionError, List[E
         val newScopes = localScope :: scopes
         newScopes
           .get(name)
-          .toRight({
-            scopes.show
-            ExecutionError.UnknownDefinition(name)
-          })
+          .toRight(ExecutionError.UnknownDefinition(name))
           .flatMap({
             case Redef(_, expression) => expression.asRight
             case Const(_, expression) => expression.asRight
             case NativeFunc(name, f) =>
-              eval(newScopes, args.map(arg => arg()))
+              eval(newScopes, args)
                 .flatMap(evaluatedArgs => eval(newScopes, f(evaluatedArgs)))
                 .map(_.last)
             case Func(name, params, body) =>
               (params zip args)
                 .map({
                   case (FuncParam(_, false), arg) =>
-                    eval(newScopes, List(arg())).map(_.last).map(res => () => res)
+                    eval(newScopes, List(arg)).map(_.last)
                   case (FuncParam(_, true), arg) =>
-                    Right(() =>
-                      eval(newScopes, List(arg())).map(_.last).getOrElse(throw ExecutionError.LazyArgEvaluation())
-                    )
+                    sys.error("Lazy func params are not implemented")
                 })
                 .partitionToEither
                 .mapLeft(ExecutionError.Multi(_))
                 .flatMap(evaluatedArgs => {
                   val paramScope: mutable.Map[Id, Definition] = mutable.Map()
                   (params zip evaluatedArgs)
-                    .foreach({ case (param, arg) => paramScope.put(param.name, Const(param.name, arg())) })
+                    .foreach({ case (param, arg) => paramScope.put(param.name, Const(param.name, arg)) })
                   eval(paramScope :: newScopes, body).map(_.last)
                 })
           })
@@ -157,43 +152,43 @@ class Context:
         "nth",
         ls =>
           (ls(0), ls(1)) match
-            case (LInt(n), EList(ls)) => List(ls(n))
-            case (x, y)               => throw WrongArgumentTypes(List(List("int", "list")), List(x, y))
+            case (LNum(n), EList(ls)) => List(ls(n.toInt))
+            case (x, y)               => throw WrongArgumentTypes(List(List("num", "list")), List(x, y))
       ),
       NativeFunc(
         ">=",
         ls =>
           (ls(0), ls(1)) match
-            case (LInt(a), LInt(b)) => List(LBool(a >= b))
-            case (x, y)             => throw WrongArgumentTypes(List(List("int", "int")), List(x, y))
+            case (LNum(a), LNum(b)) => List(LBool(a >= b))
+            case (x, y)             => throw WrongArgumentTypes(List(List("num", "num")), List(x, y))
       ),
       NativeFunc(
         "<",
         ls =>
           (ls(0), ls(1)) match
-            case (LInt(a), LInt(b)) => List(LBool(a < b))
-            case (x, y)             => throw WrongArgumentTypes(List(List("int", "int")), List(x, y))
+            case (LNum(a), LNum(b)) => List(LBool(a < b))
+            case (x, y)             => throw WrongArgumentTypes(List(List("num", "num")), List(x, y))
       ),
       NativeFunc(
         "=",
         ls =>
           (ls(0), ls(1)) match
-            case (LInt(a), LInt(b)) => List(LBool(a == b))
-            case (x, y)             => throw WrongArgumentTypes(List(List("int", "int")), List(x, y))
+            case (LNum(a), LNum(b)) => List(LBool(a == b))
+            case (x, y)             => throw WrongArgumentTypes(List(List("num", "num")), List(x, y))
       ),
       NativeFunc(
         "+",
         ls =>
           (ls(0), ls(1)) match
-            case (LInt(a), LInt(b)) => List(LInt(a + b))
-            case (x, y)             => throw WrongArgumentTypes(List(List("int", "int")), List(x, y))
+            case (LNum(a), LNum(b)) => List(LNum(a + b))
+            case (x, y)             => throw WrongArgumentTypes(List(List("num", "num")), List(x, y))
       ),
       NativeFunc(
         "*",
         ls =>
           (ls(0), ls(1)) match
-            case (LInt(a), LInt(b)) => List(LInt(a * b))
-            case (x, y)             => throw WrongArgumentTypes(List(List("int", "int")), List(x, y))
+            case (LNum(a), LNum(b)) => List(LNum(a * b))
+            case (x, y)             => throw WrongArgumentTypes(List(List("num", "num")), List(x, y))
       ),
       NativeFunc(
         "println",
@@ -203,12 +198,11 @@ class Context:
               print(a)
               LUnit
             ls(0) match
-              case LNull      => f("null")
-              case LUnit      => f("()")
-              case LBool(x)   => f(x)
-              case LInt(x)    => f(x)
-              case LDouble(x) => f(x)
-              case LStr(x)    => f(x)
+              case LNull    => f("null")
+              case LUnit    => f("()")
+              case LBool(x) => f(x)
+              case LNum(x)  => f(x)
+              case LStr(x)  => f(x)
               case EList(ls) =>
                 f("'(");
                 ls.foreach { x =>

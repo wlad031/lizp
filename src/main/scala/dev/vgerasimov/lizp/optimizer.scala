@@ -13,13 +13,13 @@ def optimize(expressions: List[Expr]): List[Expr] =
       case expr => expr
     })
 
-private def optimizeTailRecFunc(id: Id, params: List[FuncParam], args: List[LazyExpr], cond: Expr, result: Expr): Expr =
+private def optimizeTailRecFunc(id: Id, params: List[FuncParam], args: List[Expr], cond: Expr, result: Expr): Expr =
   val ls = (params zip args).map({
     case (p, a) => {
       val id = Id(s"${p.name.v}${'$'}0")
       (
         Const(id, LUnit),
-        Redef(id, a()),
+        Redef(id, a),
         Redef(p.name, Call(id))
       )
     }

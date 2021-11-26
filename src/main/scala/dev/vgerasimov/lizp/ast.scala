@@ -8,19 +8,16 @@ case object LUnit extends Expr
 case object LNull extends Expr
 
 case class LBool(v: Boolean) extends Expr
-case class LInt(v: Int) extends Expr
-case class LDouble(v: Double) extends Expr
+case class LNum(v: BigDecimal) extends Expr
 case class LStr(v: String) extends Expr
-
-type LazyExpr = () => Expr
 
 case class EList(v: List[Expr]) extends Expr
 
 case class Call(
   id: Id,
-  args: List[LazyExpr] = Nil
+  args: List[Expr] = Nil
 ) extends Expr:
-  override def toString: String = s"""Call($id, ${args.map(a => a()).mkString(",")})"""
+  override def toString: String = s"""Call($id, ${args.mkString(",")})"""
 
 case class FuncParam(name: Id, isLazy: Boolean = false)
 
@@ -58,5 +55,5 @@ case class While(
   sideEffects: List[Expr]
 ) extends Unsafe
 
-type Literal = LNull.type | LUnit.type | LBool | LInt | LDouble | LStr
+type Literal = LNull.type | LUnit.type | LBool | LNum | LStr
 type Definition = Const | Func | NativeFunc | Redef

@@ -12,12 +12,15 @@ object Parser:
   private val lNull: P[LNull.type] = P("null").map(_ => LNull)
   private val lBool: P[LBool] = (P("true").! | P("false").!).map(_.toBoolean).map(LBool(_))
 
-  private val num: P[Int] = d.+.!.map(_.toString).map(_.toInt)
-  private val lInt: P[LInt] = ((P('-') | P('+')).!.? ~ num).map({
-    case (Some("-"), n) => LInt(-n)
-    case (_, n)         => LInt(n)
-  })
-  private val lDouble: P[LDouble] = (num ~ P(".") ~ num).map({ case (a, b) => a + 0.1 * b }).map(LDouble(_))
+  private val lNum: P[LNum] =
+    val num: P[String] = d.+.!.map(_.toString)
+    val sign: P[String] = (P('-') | P('+')).!
+    (sign.? ~ num ~ (P('.') ~ num).?).map({
+      case (Some("-"), n1, Some(n2)) => LNum(BigDecimal(s"-$n1.$n2"))
+      case (Some("-"), n1, None)     => LNum(BigDecimal(s"$n1"))
+      case (_, n1, Some(n2))         => LNum(BigDecimal(s"$n1.$n2"))
+      case (_, n1, None)             => LNum(BigDecimal(s"$n1"))
+    })
 
   private val lStr: P[LStr] = (P("\"") ~ until(P("\"")).! ~ P("\"")).map(LStr(_))
 
@@ -44,11 +47,11 @@ object Parser:
 
   private val call: P[Call] =
     P((P('(') ~~ id ~ (ws ~ expr.rep(sep = ws1)).? ~~ P(')')).map({ case (name, e) =>
-      Call(name, e.getOrElse(Nil).map(x => () => x))
+      Call(name, e.getOrElse(Nil))
     }))
 
   private val expr: P[Expr] =
-    P(choice(lNull, lUnit, lBool, lInt, lDouble, lStr, eList, fElse, func, const, call))
+    P(choice(lNull, lUnit, lBool, lNum, lStr, eList, fElse, func, const, call))
 
   def apply(string: String): ParsingError | List[Expr] = (wss ~ expr.rep(sep = ws1) ~~ end)(string) match
     case POut.Success(v, _, _, _) => v

@@ -17,7 +17,7 @@ import dev.vgerasimov.lizp.Parser.*
       |(fib 7 0 0 1)
       |(fib 8 0 0 1)
       |(fib 9 0 0 1)
-      |(fib 10 0 0 1)
+      |(fib 200 0 0 1)
       |""".stripMargin
 
   Parser(source) match
