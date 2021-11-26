@@ -9,7 +9,8 @@ def optimize(expressions: List[Expr]): List[Expr] =
             optimizeTailRecFunc(id, params, args, cond, elseExpr)
           case If(cond, thenExpr, Call(callId, args)) if id == callId =>
             optimizeTailRecFunc(id, params, args, cond, thenExpr)
-          case _ => f
+          case _ =>
+            Func(id, params, optimize(body))
       case expr => expr
     })
 
