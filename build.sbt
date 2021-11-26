@@ -9,7 +9,7 @@ val root = project
     githubRepository := "lizp",
     scalacOptions ++= Seq(
       "-rewrite",
-      "-source", "future"
+      "-source", "future",
     ),
     libraryDependencies ++= {
       val munitVersion = "0.7.29"
