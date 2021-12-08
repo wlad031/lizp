@@ -15,7 +15,7 @@ def expand(expressions: List[Expr]): Either[LizpError, List[Expr]] =
 private def expand(expression: Expr): Either[LizpError, Expr] =
   expression match
     case literal: Literal => literal.asRight
-    case LList(Sym("def") :: Sym(name) :: LList(params) :: body) =>
+    case LList(Sym("def") :: LList(Sym(name) :: params) :: body) =>
       body
         .map(expand)
         .partitionToEither
