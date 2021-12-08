@@ -17,7 +17,7 @@ val root = project
       Seq(
         "org.scalameta"  %% "munit"            % munitVersion % Test,
         "org.scalameta"  %% "munit-scalacheck" % munitVersion % Test,
-        "dev.vgerasimov" %% "slowparse"        % "0.1.0",
+        "dev.vgerasimov" %% "slowparse"        % "0.1.1",
       )
     },
   )
