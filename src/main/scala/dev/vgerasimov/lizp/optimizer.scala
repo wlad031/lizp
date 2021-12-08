@@ -1,18 +1,22 @@
 package dev.vgerasimov.lizp
 
-def optimize(expressions: List[Expr]): List[Expr] =
+import dev.vgerasimov.lizp.syntax.*
+
+def optimize(expressions: List[Expr]): Either[LizpError, List[Expr]] =
   expressions
     .map({
       case f @ Func(id, params, body) =>
         body.last match
           case If(cond, Call(callId, args), elseExpr) if id == callId =>
-            optimizeTailRecFunc(id, params, args, cond, elseExpr)
+            optimizeTailRecFunc(id, params, args, cond, elseExpr).asRight
           case If(cond, thenExpr, Call(callId, args)) if id == callId =>
-            optimizeTailRecFunc(id, params, args, cond, thenExpr)
+            optimizeTailRecFunc(id, params, args, cond, thenExpr).asRight
           case _ =>
-            Func(id, params, optimize(body))
-      case expr => expr
+            optimize(body).map(Func(id, params, _))
+      case expr => expr.asRight
     })
+    .partitionToEither
+    .mapLeft(LizpError.Multi(_))
 
 private def optimizeTailRecFunc(id: Sym, params: List[FuncParam], args: List[Expr], cond: Expr, result: Expr): Expr =
   val ls = (params zip args).map({

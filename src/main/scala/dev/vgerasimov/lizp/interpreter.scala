@@ -31,7 +31,7 @@ extension (scopes: Scopes)
               .mkString(", ")}) -> ${exprs}""")
       )
 
-def eval(scopes: Scopes, expressions: List[Expr]): Either[ExecutionError, List[Expr]] =
+def eval(scopes: Scopes, expressions: List[Expr]): Either[LizpError, List[Expr]] =
   val localScope = mutable.Map[Sym, Definition]()
   def putToLocalScope(id: Sym, definition: Definition): LUnit.type =
     localScope.put(id, definition)
@@ -74,7 +74,7 @@ def eval(scopes: Scopes, expressions: List[Expr]): Either[ExecutionError, List[E
         unsafe match
           case While(condition, sideEffects) =>
             val newScopes = localScope :: scopes
-            var result: Either[ExecutionError, List[Expr]] = null
+            var result: Either[LizpError, List[Expr]] = null
             breakable {
               while (true) do
                 eval(newScopes, List(condition))
@@ -115,7 +115,7 @@ def eval(scopes: Scopes, expressions: List[Expr]): Either[ExecutionError, List[E
                     sys.error("Lazy func params are not implemented")
                 })
                 .partitionToEither
-                .mapLeft(ExecutionError.Multi(_))
+                .mapLeft(LizpError.Multi(_))
                 .flatMap(evaluatedArgs => {
                   val paramScope: mutable.Map[Sym, Definition] = mutable.Map()
                   (params zip evaluatedArgs)
@@ -125,12 +125,10 @@ def eval(scopes: Scopes, expressions: List[Expr]): Either[ExecutionError, List[E
           })
     })
     .partitionToEither
-    .mapLeft(ExecutionError.Multi(_))
+    .mapLeft(LizpError.Multi(_))
 
-sealed trait ExecutionError extends RuntimeException
+sealed trait ExecutionError extends RuntimeException with LizpError
 object ExecutionError:
-  case class Multi(errors: List[ExecutionError]) extends ExecutionError:
-    override def toString: String = errors.mkString("\n")
   case class UnknownDefinition(ref: Sym) extends ExecutionError:
     override def toString: String = s"Unknown definition: $ref"
   case class UnexpectedDefinition() extends ExecutionError

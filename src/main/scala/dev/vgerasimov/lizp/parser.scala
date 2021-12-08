@@ -5,10 +5,44 @@ import dev.vgerasimov.slowparse.P
 import dev.vgerasimov.slowparse.Parsers.*
 import dev.vgerasimov.slowparse.Parsers.given
 
-object Parser:
-  private val sym: P[Sym] = choice(alphaNum | anyFrom("-_+*#@!?^\\|;:.,~/=<>%$")).*.!.map(Sym(_))
+import dev.vgerasimov.lizp.syntax.*
 
-  private val lUnit: P[LUnit.type] = P("()").map(_ => LUnit)
+def parse(string: String): Either[ParsingError, List[Expr]] = Parser.apply(string)
+
+def expand(expressions: List[Expr]): Either[LizpError, List[Expr]] =
+  expressions.map(expand).partitionToEither.mapLeft(LizpError.Multi(_))
+
+private def expand(expression: Expr): Either[LizpError, Expr] =
+  expression match
+    case literal: Literal => literal.asRight
+    case LList(Sym("def") :: Sym(name) :: LList(params) :: body) =>
+      body
+        .map(expand)
+        .partitionToEither
+        .map(Func(Sym(name), params.map(_.asInstanceOf[Sym]).map(FuncParam(_)), _))
+        .mapLeft(LizpError.Multi(_))
+    case LList(Sym("val") :: Sym(name) :: body :: Nil) =>
+      expand(body).map(Const(Sym(name), _))
+    case LList(Sym("if") :: condition :: thenExpression :: elseExpression :: Nil) =>
+      for {
+        cond     <- expand(condition)
+        thenExpr <- expand(thenExpression)
+        elseExpr <- expand(elseExpression)
+      } yield If(cond, thenExpr, elseExpr)
+    case LList(Sym(ref) :: args) =>
+      args
+        .map(expand)
+        .partitionToEither
+        .map(Call(Sym(ref), _))
+        .mapLeft(LizpError.Multi(_))
+    case list: LList => list.asRight
+    case expression  => ExpansionError(s"Unexpected expression: $expression").asLeft
+
+private object Parser:
+  private val sym: P[Sym] =
+    ((alphaNum | anyFrom("-_+*#@!?^\\|;:.,~/=<>%$")).! ~ until(anyFrom(" \t\r\n()")).!)
+      .map({ case (head, tail) => Sym(head + tail) })
+
   private val lNull: P[LNull.type] = P("null").map(_ => LNull)
   private val lBool: P[LBool] = (P("true").! | P("false").!).map(_.toBoolean).map(LBool(_))
 
@@ -25,37 +59,14 @@ object Parser:
   private val lStr: P[LStr] = (P("\"") ~ until(P("\"")).! ~ P("\"")).map(LStr(_))
 
   private val lList: P[LList] =
-    P(P("'(") ~~ expr.rep(sep = ws1) ~~ P(')')).map(LList(_))
-
-  private val fElse: P[If] =
-    P(P('(') ~~ P("if") ~-~ expr ~-~ expr ~-~ expr ~~ P(')'))
-      .map({ case (cond, thenExpr, elseExpr) => If(cond, thenExpr, elseExpr) })
-
-  private val func: P[Func] =
-    val params: P[List[FuncParam]] =
-      P('(')
-      ~ (ws0 ~ (P("=>").?.map(_.isDefined) ~ sym)
-        .rep(sep = ws1)
-        .map(_.map({ case (isLazy, id) => FuncParam(id, isLazy) }))).?.map(_.getOrElse(Nil))
-      ~ P(')')
-    P(P('(') ~~ P("def") ~-~ sym ~-~ params ~ (ws1 ~ expr).+ ~~ P(')'))
-      .map({ case (name, p, exprs) => Func(name, p, exprs) })
-
-  private val const: P[Const] =
-    P(P('(') ~~ P("val") ~-~ sym ~-~ expr ~~ P(')'))
-      .map({ case (name, expr) => Const(name, expr) })
-
-  private val call: P[Call] =
-    P((P('(') ~~ sym ~ (ws ~ expr.rep(sep = ws1)).? ~~ P(')')).map({ case (name, e) =>
-      Call(name, e.getOrElse(Nil))
-    }))
+    P(P("(") ~~ expr.rep(sep = ws1) ~~ P(')')).map(LList(_))
 
   private val expr: P[Expr] =
-    P(choice(lNull, lUnit, lBool, lNum, lStr, lList, fElse, func, const, call))
+    P(choice(lNull, lBool, lNum, lStr, sym, lList))
 
-  def apply(string: String): ParsingError | List[Expr] = (ws0 ~ expr.rep(sep = ws1) ~~ end)(string) match
-    case POut.Success(v, _, _, _) => v
-    case f @ POut.Failure(message, _) =>
-      ParsingError(message)
+  def apply(string: String): Either[ParsingError, List[Expr]] = (ws0 ~ expr.rep(sep = ws1) ~~ end)(string) match
+    case POut.Success(v, _, _, _)     => v.asRight
+    case f @ POut.Failure(message, _) => ParsingError(message).asLeft
 
-case class ParsingError(message: String)
+case class ExpansionError(message: String) extends LizpError
+case class ParsingError(message: String) extends LizpError

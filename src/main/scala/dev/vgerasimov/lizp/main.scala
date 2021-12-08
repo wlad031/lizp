@@ -16,17 +16,15 @@ import dev.vgerasimov.lizp.Parser.*
        |(fib 100)
        |""".stripMargin
 
-  Parser(source) match
-    case ParsingError(message) =>
-      Console.err.println(s"""|Parsing error:
-                              |$message""".stripMargin)
-    case exprs: List[Expr] =>
-      val optimizedExpressions: List[Expr] = optimize(exprs)
-      println(optimizedExpressions)
-      eval(List((new Context()).intrinsics), optimizedExpressions) match
-        case Left(error) =>
-          Console.err.println(s"""|Execution error:
-                                  |$error""".stripMargin)
-        case Right(result) =>
-          Console.out.println(s"""|Result:
-                                  |${result.map(r => "> " + r.toString).mkString("\n")}""".stripMargin)
+  (for {
+    parsedExpressions    <- parse(source)
+    expandedExpressions  <- expand(parsedExpressions)
+    optimizedExpressions <- optimize(expandedExpressions)
+    result               <- eval(List((new Context()).intrinsics), optimizedExpressions)
+  } yield result) match
+    case Left(error) =>
+      Console.err.println(s"""|Error:
+                              |$error""".stripMargin)
+    case Right(result) =>
+      Console.out.println(s"""|Result:
+                              |${result.map(r => "> " + r.toString).mkString("\n")}""".stripMargin)

@@ -1,5 +1,10 @@
 package dev.vgerasimov.lizp
 
+trait LizpError
+object LizpError:
+  case class Multi(errors: List[LizpError]) extends LizpError:
+    override def toString: String = errors.mkString("\n")
+
 private object syntax:
 
   extension [A](a: A)
