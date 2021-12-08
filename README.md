@@ -11,8 +11,8 @@ Lizp is also an interpreter for this language written in Scala.
 
 #### Fibonacci numbers
 ```
-(def fib (n)
-  (def iter (i a b)
+(def (fib n)
+  (def (iter i a b)
     (if (< (i) (n)) 
         (iter (+ (i) 1) (b) (+ (a) (b)))
         (a)))
@@ -43,7 +43,7 @@ Outputs:
 
 ##### Definition
 ```
-(def greeting (name) (println (hello) (name)))
+(def (greeting name) (println (hello) (name)))
 ```
 
 #### Calling
