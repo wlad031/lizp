@@ -11,55 +11,40 @@ private[lizp] object native:
   lazy val all: List[Definition] = List(
     nth,
     greaterOrEqual,
+    lessOrEqual,
+    greater,
     less,
     equal,
+    notEqual,
     plus,
     mult,
+    minus,
+    divide,
     printlnFunc
   )
 
-  val nth = NativeFunc(
-    "nth",
-    ls =>
-      (ls(0), ls(1)) match
-        case (LNum(n), LList(ls)) => List(ls(n.toInt))
-        case (x, y)               => throw WrongArgumentTypes(List(List("num", "list")), List(x, y))
+  private def in2out1(name: String, func: PartialFunction[(Expr, Expr), Expr]) = NativeFunc(
+    name,
+    ls => {
+      val arg = (ls(0), ls(1))
+      if (func.isDefinedAt(arg)) List(func(arg)) else throw new WrongArgumentTypes(Nil, Nil) // FIXME: error args
+    }
   )
-  val greaterOrEqual = NativeFunc(
-    ">=",
-    ls =>
-      (ls(0), ls(1)) match
-        case (LNum(a), LNum(b)) => List(LBool(a >= b))
-        case (x, y)             => throw WrongArgumentTypes(List(List("num", "num")), List(x, y))
-  )
-  val less = NativeFunc(
-    "<",
-    ls =>
-      (ls(0), ls(1)) match
-        case (LNum(a), LNum(b)) => List(LBool(a < b))
-        case (x, y)             => throw WrongArgumentTypes(List(List("num", "num")), List(x, y))
-  )
-  val equal = NativeFunc(
-    "=",
-    ls =>
-      (ls(0), ls(1)) match
-        case (LNum(a), LNum(b)) => List(LBool(a == b))
-        case (x, y)             => throw WrongArgumentTypes(List(List("num", "num")), List(x, y))
-  )
-  val plus = NativeFunc(
-    "+",
-    ls =>
-      (ls(0), ls(1)) match
-        case (LNum(a), LNum(b)) => List(LNum(a + b))
-        case (x, y)             => throw WrongArgumentTypes(List(List("num", "num")), List(x, y))
-  )
-  val mult = NativeFunc(
-    "*",
-    ls =>
-      (ls(0), ls(1)) match
-        case (LNum(a), LNum(b)) => List(LNum(a * b))
-        case (x, y)             => throw WrongArgumentTypes(List(List("num", "num")), List(x, y))
-  )
+
+// format: off
+  val nth            = in2out1("nth", { case (LNum(n), LList(ls)) => ls(n.toInt) })
+  val greaterOrEqual = in2out1(">=",  { case (LNum(a), LNum(b)) => LBool(a >= b) })
+  val lessOrEqual    = in2out1("<=",  { case (LNum(a), LNum(b)) => LBool(a <= b) })
+  val greater        = in2out1(">",   { case (LNum(a), LNum(b)) => LBool(a > b) })
+  val less           = in2out1("<",   { case (LNum(a), LNum(b)) => LBool(a < b) })
+  val equal          = in2out1("=",   { case (a, b) => LBool(a.equals(b)) })
+  val notEqual       = in2out1("!=",  { case (a, b) => LBool(!a.equals(b)) })
+  val plus           = in2out1("+",   { case (LNum(a), LNum(b)) => LNum(a + b)
+                                        case (LStr(a), LStr(b)) => LStr(a + b) })
+  val mult           = in2out1("*",   { case (LNum(a), LNum(b)) => LNum(a * b) })
+  val minus          = in2out1("-",   { case (LNum(a), LNum(b)) => LNum(a - b) })
+  val divide         = in2out1("/",   { case (LNum(a), LNum(b)) => LNum(a / b) })
+// format: on
   val printlnFunc = NativeFunc(
     "println",
     ls =>
