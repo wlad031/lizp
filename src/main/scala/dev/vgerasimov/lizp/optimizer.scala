@@ -14,10 +14,10 @@ def optimize(expressions: List[Expr]): List[Expr] =
       case expr => expr
     })
 
-private def optimizeTailRecFunc(id: Id, params: List[FuncParam], args: List[Expr], cond: Expr, result: Expr): Expr =
+private def optimizeTailRecFunc(id: Sym, params: List[FuncParam], args: List[Expr], cond: Expr, result: Expr): Expr =
   val ls = (params zip args).map({
     case (p, a) => {
-      val id = Id(s"${p.name.v}${'$'}0")
+      val id = Sym(s"${p.name.value}${'$'}0")
       (
         Const(id, LUnit),
         Redef(id, a),

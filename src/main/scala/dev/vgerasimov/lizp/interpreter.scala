@@ -4,11 +4,11 @@ import dev.vgerasimov.lizp.syntax.*
 
 import scala.collection.mutable
 
-private type Scopes = List[mutable.Map[Id, Definition]]
+private type Scopes = List[mutable.Map[Sym, Definition]]
 
 extension (scopes: Scopes)
-  def get(id: Id): Option[Definition] = scopes.find(_.contains(id)).map(_.apply(id))
-  def update(id: Id, definition: Definition): Unit =
+  def get(id: Sym): Option[Definition] = scopes.find(_.contains(id)).map(_.apply(id))
+  def update(id: Sym, definition: Definition): Unit =
     def iter(scopes: Scopes): Unit =
       scopes match
         case Nil                              => throw ExecutionError.UnknownDefinition(id)
@@ -22,28 +22,28 @@ extension (scopes: Scopes)
       val currentScope = scopes(scopes.length - i - 1)
       currentScope.foreach((id, definition) =>
         definition match
-          case Redef(_, exprs) => println(s"$margin${id.v} -> ${exprs}")
-          case Const(_, exprs) => println(s"$margin${id.v} -> ${exprs}")
-          case _: NativeFunc   => println(s"$margin${id.v} -> native func")
+          case Redef(_, exprs) => println(s"$margin${id.value} -> ${exprs}")
+          case Const(_, exprs) => println(s"$margin${id.value} -> ${exprs}")
+          case _: NativeFunc   => println(s"$margin${id.value} -> native func")
           case Func(_, params, exprs) =>
-            println(s"""$margin${id.v} -> (${params
-              .map(p => ((if (p.isLazy) "=>" else "") + p.name.v))
+            println(s"""$margin${id.value} -> (${params
+              .map(p => ((if (p.isLazy) "=>" else "") + p.name.value))
               .mkString(", ")}) -> ${exprs}""")
       )
 
 def eval(scopes: Scopes, expressions: List[Expr]): Either[ExecutionError, List[Expr]] =
-  val localScope = mutable.Map[Id, Definition]()
-  def putToLocalScope(id: Id, definition: Definition): LUnit.type =
+  val localScope = mutable.Map[Sym, Definition]()
+  def putToLocalScope(id: Sym, definition: Definition): LUnit.type =
     localScope.put(id, definition)
     LUnit
-  def updateInScopes(scopes: Scopes, id: Id, definition: Definition): LUnit.type =
+  def updateInScopes(scopes: Scopes, id: Sym, definition: Definition): LUnit.type =
     scopes.update(id, definition)
     LUnit
 
   expressions
     .map({
       case literal: Literal   => literal.asRight
-      case EList(expressions) => eval(localScope :: scopes, expressions).map(EList(_))
+      case LList(expressions) => eval(localScope :: scopes, expressions).map(LList(_))
       case definition: Definition =>
         definition match
           case func @ NativeFunc(name, _) => putToLocalScope(name, func).asRight
@@ -117,7 +117,7 @@ def eval(scopes: Scopes, expressions: List[Expr]): Either[ExecutionError, List[E
                 .partitionToEither
                 .mapLeft(ExecutionError.Multi(_))
                 .flatMap(evaluatedArgs => {
-                  val paramScope: mutable.Map[Id, Definition] = mutable.Map()
+                  val paramScope: mutable.Map[Sym, Definition] = mutable.Map()
                   (params zip evaluatedArgs)
                     .foreach({ case (param, arg) => paramScope.put(param.name, Const(param.name, arg)) })
                   eval(paramScope :: newScopes, body).map(_.last)
@@ -131,28 +131,28 @@ sealed trait ExecutionError extends RuntimeException
 object ExecutionError:
   case class Multi(errors: List[ExecutionError]) extends ExecutionError:
     override def toString: String = errors.mkString("\n")
-  case class UnknownDefinition(id: Id) extends ExecutionError:
-    override def toString: String = s"Unknown definition: $id"
+  case class UnknownDefinition(ref: Sym) extends ExecutionError:
+    override def toString: String = s"Unknown definition: $ref"
   case class UnexpectedDefinition() extends ExecutionError
   case class WrongArgumentTypes(expected: List[List[String]], got: List[Expr]) extends ExecutionError
   case class LazyArgEvaluation() extends ExecutionError
 
 class Context:
-  given Conversion[String, Id] = Id(_)
-  given Conversion[Id, FuncParam] = FuncParam(_, isLazy = false)
+  given Conversion[String, Sym] = Sym(_)
+  given Conversion[Sym, FuncParam] = FuncParam(_, isLazy = false)
   given Conversion[String, FuncParam] with
-    def apply(string: String): FuncParam = FuncParam(Id(string), isLazy = false)
+    def apply(string: String): FuncParam = FuncParam(Sym(string), isLazy = false)
 
   import ExecutionError.*
 
-  val intrinsics: mutable.Map[Id, Definition] = {
-    val scope = mutable.Map[Id, Definition]()
+  val intrinsics: mutable.Map[Sym, Definition] = {
+    val scope = mutable.Map[Sym, Definition]()
     List[Definition](
       NativeFunc(
         "nth",
         ls =>
           (ls(0), ls(1)) match
-            case (LNum(n), EList(ls)) => List(ls(n.toInt))
+            case (LNum(n), LList(ls)) => List(ls(n.toInt))
             case (x, y)               => throw WrongArgumentTypes(List(List("num", "list")), List(x, y))
       ),
       NativeFunc(
@@ -203,7 +203,7 @@ class Context:
               case LBool(x) => f(x)
               case LNum(x)  => f(x)
               case LStr(x)  => f(x)
-              case EList(ls) =>
+              case LList(ls) =>
                 f("'(");
                 ls.foreach { x =>
                   f(x); f(", ")
@@ -226,6 +226,6 @@ class Context:
         case redef @ Redef(id, _)     => (id, redef)
         case func @ NativeFunc(id, _) => (id, func)
       })
-      .foreach({ case (k: Id, v: Definition) => scope.put(k, v) })
+      .foreach({ case (k: Sym, v: Definition) => scope.put(k, v) })
     scope
   }
