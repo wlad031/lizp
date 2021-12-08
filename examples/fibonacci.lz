@@ -1,0 +1,11 @@
+(def fib (n)
+  (def iter (i a b)
+    (if (< (i) (n)) 
+        (iter (+ (i) 1) (b) (+ (a) (b)))
+        (a)))
+  (if (= (n) 1) 0 (iter 0 0 1)))
+
+(fib 1)
+(fib 2)
+(fib 10)
+(fib 100)

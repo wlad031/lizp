@@ -1,22 +1,13 @@
 package dev.vgerasimov.lizp
 
+import scala.io.Source
+
 import dev.vgerasimov.lizp.Parser.*
+import dev.vgerasimov.lizp.syntax.*
 
-@main def run =
-  val source =
-    """|(def fib (n)
-       |  (def iter (i a b)
-       |    (if (< (i) (n)) 
-       |        (iter (+ (i) 1) (b) (+ (a) (b)))
-       |        (a)))
-       |  (if (= (n) 1) 0 (iter 0 0 1)))
-       |(fib 1)
-       |(fib 2)
-       |(fib 10)
-       |(fib 100)
-       |""".stripMargin
-
+@main def run(files: String*) =
   (for {
+    source               <- files.map(Source.fromFile).map(_.getLines.mkString("\n")).mkString("\n").asRight
     parsedExpressions    <- parse(source)
     expandedExpressions  <- expand(parsedExpressions)
     optimizedExpressions <- optimize(expandedExpressions)
