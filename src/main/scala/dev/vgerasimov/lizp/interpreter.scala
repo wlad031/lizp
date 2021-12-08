@@ -43,6 +43,7 @@ def eval(scopes: Scopes, expressions: List[Expr]): Either[LizpError, List[Expr]]
   expressions
     .map({
       case literal: Literal   => literal.asRight
+      case lambda: Lambda     => lambda.asRight
       case LList(expressions) => eval(localScope :: scopes, expressions).map(LList(_))
       case definition: Definition =>
         definition match
@@ -119,7 +120,11 @@ def eval(scopes: Scopes, expressions: List[Expr]): Either[LizpError, List[Expr]]
                 .flatMap(evaluatedArgs => {
                   val paramScope: mutable.Map[Sym, Definition] = mutable.Map()
                   (params zip evaluatedArgs)
-                    .foreach({ case (param, arg) => paramScope.put(param.name, Const(param.name, arg)) })
+                    .foreach({
+                      case (param, Lambda(lambdaParams, lambdaBody)) =>
+                        paramScope.put(param.name, Func(param.name, lambdaParams, lambdaBody))
+                      case (param, arg) => paramScope.put(param.name, Const(param.name, arg))
+                    })
                   eval(paramScope :: newScopes, body).map(_.last)
                 })
           })

@@ -9,7 +9,10 @@ private[lizp] object native:
   import ExecutionError.*
 
   lazy val all: List[Definition] = List(
-    nth,
+    nil,
+    list,
+    head,
+    tail,
     greaterOrEqual,
     lessOrEqual,
     greater,
@@ -23,6 +26,14 @@ private[lizp] object native:
     printlnFunc
   )
 
+  private def in1out1(name: String, func: PartialFunction[Expr, Expr]) = NativeFunc(
+    name,
+    ls => {
+      val arg = ls(0)
+      if (func.isDefinedAt(arg)) List(func(arg)) else throw new WrongArgumentTypes(Nil, Nil) // FIXME: error args
+    }
+  )
+
   private def in2out1(name: String, func: PartialFunction[(Expr, Expr), Expr]) = NativeFunc(
     name,
     ls => {
@@ -31,8 +42,13 @@ private[lizp] object native:
     }
   )
 
+  val nil = Const("nil", LList(Nil))
+
 // format: off
-  val nth            = in2out1("nth", { case (LNum(n), LList(ls)) => ls(n.toInt) })
+  val head = in1out1("head", { case LList(ls) => ls.head })
+  val tail = in1out1("tail", { case LList(ls) => LList(ls.tail) })
+  val list = NativeFunc("list", ls => List(LList(ls)))
+
   val greaterOrEqual = in2out1(">=",  { case (LNum(a), LNum(b)) => LBool(a >= b) })
   val lessOrEqual    = in2out1("<=",  { case (LNum(a), LNum(b)) => LBool(a <= b) })
   val greater        = in2out1(">",   { case (LNum(a), LNum(b)) => LBool(a > b) })
@@ -50,7 +66,7 @@ private[lizp] object native:
     ls =>
       List({
         def f(a: Any): LUnit.type =
-          print(a)
+          println(a)
           LUnit
         ls(0) match
           case LNull    => f("null")

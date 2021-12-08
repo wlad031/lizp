@@ -48,12 +48,21 @@ Outputs:
 
 #### Calling
 ```
-(greeing "John")
+(greeting "John")
 ```
 
 #### Conditions
 ```
 (if (> 1 0) (println true) (println false))
+```
+
+#### Lambda (anonymous functions)
+```
+(def (foo f a b) (f a b))
+
+(foo (lambda (x y) (+ x y)) 10 20)
+(foo (lambda (x y) (* x y)) 10 20)
+(foo (lambda (x y) (/ y x)) 10 20)
 ```
 
 ### Features

@@ -19,6 +19,7 @@ case class NativeFunc(name: Sym, func: List[Expr] => List[Expr]) extends Expr
 case class Func(name: Sym, params: List[FuncParam], body: List[Expr]) extends Expr
 case class Const(name: Sym, expression: Expr) extends Expr
 case class Redef(ref: Sym, expression: Expr) extends Expr
+case class Lambda(params: List[FuncParam], body: List[Expr]) extends Expr
 
 case class If(condition: Expr, thenExpression: Expr, elseExpression: Expr) extends Expr
 

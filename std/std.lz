@@ -1,0 +1,13 @@
+(def (nth ls n)
+  (def (iter i x xs)
+    (println i)
+    (if (= i n) x (iter (+ i 1) (head xs) (tail xs))))
+  (iter 0 (head ls) (tail ls)))
+
+(nth (list 1 2 3 4 5 6) 0)
+(nth (list 1 2 3 4 5 6) 1)
+(nth (list 1 2 3 4 5 6) 2)
+(nth (list 1 2 3 4 5 6) 3)
+(nth (list 1 2 3 4 5 6) 4)
+(nth (list 1 2 3 4 5 6) 5)
+(nth (list 1 2 3 4 5 6) 6)

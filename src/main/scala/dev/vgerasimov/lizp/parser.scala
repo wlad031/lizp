@@ -6,6 +6,7 @@ import dev.vgerasimov.slowparse.Parsers.*
 import dev.vgerasimov.slowparse.Parsers.given
 
 import dev.vgerasimov.lizp.syntax.*
+import scala.util.Random
 
 def parse(string: String): Either[ParsingError, List[Expr]] = Parser.apply(string)
 
@@ -24,6 +25,12 @@ private def expand(expression: Expr): Either[LizpError, Expr] =
         .mapLeft(LizpError.Multi(_))
     case LList(Sym("val") :: (name: Sym) :: body :: Nil) =>
       expand(body).map(Const(name, _))
+    case LList(Sym("lambda") :: LList(params) :: body) =>
+      body
+        .map(expand)
+        .partitionToEither
+        .map(Lambda(params.map(_.asInstanceOf[Sym]).map(FuncParam(_)), _))
+        .mapLeft(LizpError.Multi(_))
     case LList(Sym("if") :: condition :: thenExpression :: elseExpression :: Nil) =>
       for {
         cond     <- expand(condition)
