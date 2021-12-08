@@ -15,25 +15,26 @@ def expand(expressions: List[Expr]): Either[LizpError, List[Expr]] =
 private def expand(expression: Expr): Either[LizpError, Expr] =
   expression match
     case literal: Literal => literal.asRight
-    case LList(Sym("def") :: LList(Sym(name) :: params) :: body) =>
+    case ref: Sym         => Call(ref).asRight
+    case LList(Sym("def") :: LList((name: Sym) :: params) :: body) =>
       body
         .map(expand)
         .partitionToEither
-        .map(Func(Sym(name), params.map(_.asInstanceOf[Sym]).map(FuncParam(_)), _))
+        .map(Func(name, params.map(_.asInstanceOf[Sym]).map(FuncParam(_)), _))
         .mapLeft(LizpError.Multi(_))
-    case LList(Sym("val") :: Sym(name) :: body :: Nil) =>
-      expand(body).map(Const(Sym(name), _))
+    case LList(Sym("val") :: (name: Sym) :: body :: Nil) =>
+      expand(body).map(Const(name, _))
     case LList(Sym("if") :: condition :: thenExpression :: elseExpression :: Nil) =>
       for {
         cond     <- expand(condition)
         thenExpr <- expand(thenExpression)
         elseExpr <- expand(elseExpression)
       } yield If(cond, thenExpr, elseExpr)
-    case LList(Sym(ref) :: args) =>
+    case LList((ref: Sym) :: args) =>
       args
         .map(expand)
         .partitionToEither
-        .map(Call(Sym(ref), _))
+        .map(Call(ref, _))
         .mapLeft(LizpError.Multi(_))
     case list: LList => list.asRight
     case expression  => ExpansionError(s"Unexpected expression: $expression").asLeft

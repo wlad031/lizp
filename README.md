@@ -13,10 +13,10 @@ Lizp is also an interpreter for this language written in Scala.
 ```
 (def (fib n)
   (def (iter i a b)
-    (if (< (i) (n)) 
-        (iter (+ (i) 1) (b) (+ (a) (b)))
-        (a)))
-  (if (= (n) 1) 0 (iter 0 0 1)))
+    (if (< i n) 
+        (iter (+ i 1) b (+ a b))
+        a))
+  (if (= n 1) 0 (iter 0 0 1)))
 
 (fib 1)
 (fib 2)
@@ -43,7 +43,7 @@ Outputs:
 
 ##### Definition
 ```
-(def (greeting name) (println (hello) (name)))
+(def (greeting name) (println hello name))
 ```
 
 #### Calling
