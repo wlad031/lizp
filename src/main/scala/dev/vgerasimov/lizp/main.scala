@@ -11,7 +11,10 @@ import dev.vgerasimov.lizp.syntax.*
     parsedExpressions    <- parse(source)
     expandedExpressions  <- expand(parsedExpressions)
     optimizedExpressions <- optimize(expandedExpressions)
-    result               <- eval(List((new Context()).intrinsics), optimizedExpressions)
+    result <- {
+      val ctx = new Context()
+      eval(List(ctx.natives), optimizedExpressions)
+    }
   } yield result) match
     case Left(error) =>
       Console.err.println(s"""|Error:
