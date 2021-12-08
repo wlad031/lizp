@@ -6,7 +6,7 @@ import dev.vgerasimov.slowparse.Parsers.*
 import dev.vgerasimov.slowparse.Parsers.given
 
 object Parser:
-  private val id: P[Id] = choice(alphaNum | anyCharIn("-_+*#@!?^\\|;:.,~/=<>%$")).*.!.map(Id(_))
+  private val id: P[Id] = choice(alphaNum | anyFrom("-_+*#@!?^\\|;:.,~/=<>%$")).*.!.map(Id(_))
 
   private val lUnit: P[LUnit.type] = P("()").map(_ => LUnit)
   private val lNull: P[LNull.type] = P("null").map(_ => LNull)
@@ -34,7 +34,7 @@ object Parser:
   private val func: P[Func] =
     val params: P[List[FuncParam]] =
       P('(')
-      ~ (wss ~ (P("=>").?.map(_.isDefined) ~ id)
+      ~ (ws0 ~ (P("=>").?.map(_.isDefined) ~ id)
         .rep(sep = ws1)
         .map(_.map({ case (isLazy, id) => FuncParam(id, isLazy) }))).?.map(_.getOrElse(Nil))
       ~ P(')')
@@ -53,7 +53,7 @@ object Parser:
   private val expr: P[Expr] =
     P(choice(lNull, lUnit, lBool, lNum, lStr, eList, fElse, func, const, call))
 
-  def apply(string: String): ParsingError | List[Expr] = (wss ~ expr.rep(sep = ws1) ~~ end)(string) match
+  def apply(string: String): ParsingError | List[Expr] = (ws0 ~ expr.rep(sep = ws1) ~~ end)(string) match
     case POut.Success(v, _, _, _) => v
     case f @ POut.Failure(message, _) =>
       ParsingError(message)
