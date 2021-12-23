@@ -10,7 +10,7 @@ def optimize(expressions: List[Expr]): Either[LizpError, List[Expr]] =
           case If(cond, Call(callId, args), elseExpr) if id == callId =>
             optimizeTailRecFunc(id, params, args, cond, elseExpr).asRight
           case If(cond, thenExpr, Call(callId, args)) if id == callId =>
-            optimizeTailRecFunc(id, params, args, cond, thenExpr).asRight
+            optimizeTailRecFunc(id, params, args, Call(Sym("not"), List(cond)), thenExpr).asRight
           case _ =>
             optimize(body).map(Func(id, params, _))
       case expr => expr.asRight

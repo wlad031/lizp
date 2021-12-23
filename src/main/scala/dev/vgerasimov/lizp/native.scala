@@ -13,6 +13,7 @@ private[lizp] object native:
     list,
     head,
     tail,
+    not,
     greaterOrEqual,
     lessOrEqual,
     greater,
@@ -48,6 +49,7 @@ private[lizp] object native:
   val head = in1out1("head", { case LList(ls) => ls.head })
   val tail = in1out1("tail", { case LList(ls) => LList(ls.tail) })
   val list = NativeFunc("list", ls => List(LList(ls)))
+  val not = in1out1("not", { case LBool(a) => LBool(!a) })
 
   val greaterOrEqual = in2out1(">=",  { case (LNum(a), LNum(b)) => LBool(a >= b) })
   val lessOrEqual    = in2out1("<=",  { case (LNum(a), LNum(b)) => LBool(a <= b) })
