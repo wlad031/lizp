@@ -1,19 +1,17 @@
 package dev.vgerasimov.lizp
 
-import scala.io.Source
-
 import dev.vgerasimov.lizp.Parser.*
 import dev.vgerasimov.lizp.syntax.*
 
 @main def run(files: String*) =
   (for {
-    source               <- files.map(Source.fromFile).map(_.getLines.mkString("\n")).mkString("\n").asRight
+    source               <- files.map(readScript).toList.partitionToEither.map(_.mkString("\n"))
     parsedExpressions    <- parse(source)
     expandedExpressions  <- expand(parsedExpressions)
     optimizedExpressions <- optimize(expandedExpressions)
     result <- {
-      val ctx = new Context()
-      eval(List(ctx.natives), optimizedExpressions)
+      val ctx = new Context(readScript, parse, expand, optimize)
+      eval(List(ctx.natives), optimizedExpressions, ctx)
     }
   } yield result) match
     case Left(error) =>

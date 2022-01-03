@@ -15,8 +15,9 @@ def expand(expressions: List[Expr]): Either[LizpError, List[Expr]] =
 
 private def expand(expression: Expr): Either[LizpError, Expr] =
   expression match
-    case literal: Literal => literal.asRight
-    case ref: Sym         => Call(ref).asRight
+    case literal: Literal                           => literal.asRight
+    case ref: Sym                                   => Call(ref).asRight
+    case LList(Sym("include") :: LStr(file) :: Nil) => Include(file).asRight
     case LList(Sym("def") :: LList((name: Sym) :: params) :: body) =>
       body
         .map(expand)

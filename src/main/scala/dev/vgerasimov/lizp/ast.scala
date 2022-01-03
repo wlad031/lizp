@@ -21,6 +21,8 @@ case class Const(name: Sym, expression: Expr) extends Expr
 case class Redef(ref: Sym, expression: Expr) extends Expr
 case class Lambda(params: List[FuncParam], body: List[Expr]) extends Expr
 
+case class Include(file: String) extends Expr
+
 case class If(condition: Expr, thenExpression: Expr, elseExpression: Expr) extends Expr
 
 sealed trait Unsafe extends Expr

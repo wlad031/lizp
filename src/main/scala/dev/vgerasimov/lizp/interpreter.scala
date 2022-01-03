@@ -9,9 +9,9 @@ private type Scopes = List[mutable.Map[Sym, Definition]]
 extension (scopes: Scopes)
   def get(id: Sym): Option[Definition] = scopes.find(_.contains(id)).map(_.apply(id))
   def update(id: Sym, definition: Definition): Unit =
-    def iter(scopes: Scopes): Unit =
-      scopes match
-        case Nil                              => throw ExecutionError.UnknownDefinition(id)
+    def iter(ls: Scopes): Unit =
+      ls match
+        case Nil                              => scopes.headOption.map(scope => scope += (id -> definition))
         case scope :: _ if scope.contains(id) => scope += (id -> definition)
         case _ :: tail                        => iter(tail)
     iter(scopes)
@@ -31,7 +31,7 @@ extension (scopes: Scopes)
               .mkString(", ")}) -> ${exprs}""")
       )
 
-def eval(scopes: Scopes, expressions: List[Expr]): Either[LizpError, List[Expr]] =
+def eval(scopes: Scopes, expressions: List[Expr], ctx: Context): Either[LizpError, List[Expr]] =
   val localScope = mutable.Map[Sym, Definition]()
   def putToLocalScope(id: Sym, definition: Definition): LUnit.type =
     localScope.put(id, definition)
@@ -44,21 +44,21 @@ def eval(scopes: Scopes, expressions: List[Expr]): Either[LizpError, List[Expr]]
     .map({
       case literal: Literal   => literal.asRight
       case lambda: Lambda     => lambda.asRight
-      case LList(expressions) => eval(localScope :: scopes, expressions).map(LList(_))
+      case LList(expressions) => eval(localScope :: scopes, expressions, ctx).map(LList(_))
       case definition: Definition =>
         definition match
           case func @ NativeFunc(name, _) => putToLocalScope(name, func).asRight
           case func @ Func(name, _, _)    => putToLocalScope(name, func).asRight
           case Const(name, expression) =>
-            eval(localScope :: scopes, List(expression))
+            eval(localScope :: scopes, List(expression), ctx)
               .map(_.last)
               .map(evaluated => putToLocalScope(name, Const(name, evaluated)))
           case Redef(name, expression) =>
-            eval(scopes, List(expression))
+            eval(scopes, List(expression), ctx)
               .map(_.last)
               .map(evaluated => updateInScopes(scopes, name, Const(name, evaluated)))
       case If(condition, thenExpr, elseExpr) =>
-        eval(localScope :: scopes, List(condition))
+        eval(localScope :: scopes, List(condition), ctx)
           .map(_.last)
           .flatMap({
             case LUnit | LNull => false.asRight
@@ -67,7 +67,7 @@ def eval(scopes: Scopes, expressions: List[Expr]): Either[LizpError, List[Expr]]
             case LStr(value)   => (value.isEmpty).asRight
             case _             => ExecutionError.WrongArgumentTypes(null, null).asLeft
           })
-          .flatMap(condition => eval(localScope :: scopes, List(if (condition) thenExpr else elseExpr)))
+          .flatMap(condition => eval(localScope :: scopes, List(if (condition) thenExpr else elseExpr), ctx))
           .map(_.last)
       case unsafe: Unsafe =>
         // quite non-functional mutable operations
@@ -78,7 +78,7 @@ def eval(scopes: Scopes, expressions: List[Expr]): Either[LizpError, List[Expr]]
             var result: Either[LizpError, List[Expr]] = null
             breakable {
               while (true) do
-                eval(newScopes, List(condition))
+                eval(newScopes, List(condition), ctx)
                   .map(_.last)
                   .flatMap({
                     case LBool(v) => v.asRight
@@ -91,10 +91,25 @@ def eval(scopes: Scopes, expressions: List[Expr]): Either[LizpError, List[Expr]]
                     result = List(LUnit).asRight
                     break
                   case Right(true) =>
-                    result = eval(newScopes, sideEffects)
+                    result = eval(newScopes, sideEffects, ctx)
             }
             if (result == null) sys.error("Unexpected to have result null here")
             result.map(_.last)
+      case Include(file) =>
+        for {
+          source               <- ctx.readSource(file)
+          parsedExpressions    <- ctx.parse(source)
+          expandedExpressions  <- ctx.expand(parsedExpressions)
+          optimizedExpressions <- ctx.optimize(expandedExpressions.filter(_.isInstanceOf[Definition]))
+        } yield eval(
+          scopes,
+          optimizedExpressions.map({
+            case func @ Func(name, _, _) => Redef(name, func)
+            case const @ Const(name, _)  => Redef(name, const)
+          }),
+          ctx
+        )
+        LUnit.asRight
       case Call(name, args) =>
         val newScopes = localScope :: scopes
         newScopes
@@ -104,14 +119,14 @@ def eval(scopes: Scopes, expressions: List[Expr]): Either[LizpError, List[Expr]]
             case Redef(_, expression) => expression.asRight
             case Const(_, expression) => expression.asRight
             case NativeFunc(name, f) =>
-              eval(newScopes, args)
-                .flatMap(evaluatedArgs => eval(newScopes, f(evaluatedArgs)))
+              eval(newScopes, args, ctx)
+                .flatMap(evaluatedArgs => eval(newScopes, f(evaluatedArgs), ctx))
                 .map(_.last)
             case Func(name, params, body) =>
               (params zip args)
                 .map({
                   case (FuncParam(_, false), arg) =>
-                    eval(newScopes, List(arg)).map(_.last)
+                    eval(newScopes, List(arg), ctx).map(_.last)
                   case (FuncParam(_, true), arg) =>
                     sys.error("Lazy func params are not implemented")
                 })
@@ -125,12 +140,14 @@ def eval(scopes: Scopes, expressions: List[Expr]): Either[LizpError, List[Expr]]
                         paramScope.put(param.name, Func(param.name, lambdaParams, lambdaBody))
                       case (param, arg) => paramScope.put(param.name, Const(param.name, arg))
                     })
-                  eval(paramScope :: newScopes, body).map(_.last)
+                  eval(paramScope :: newScopes, body, ctx).map(_.last)
                 })
           })
     })
     .partitionToEither
     .mapLeft(LizpError.Multi(_))
+
+case class EvalResult(expressions: List[Expr], scopes: Scopes)
 
 sealed trait ExecutionError extends RuntimeException with LizpError
 object ExecutionError:
@@ -140,7 +157,13 @@ object ExecutionError:
   case class WrongArgumentTypes(expected: List[List[String]], got: List[Expr]) extends ExecutionError
   case class LazyArgEvaluation() extends ExecutionError
 
-class Context:
+class Context(
+  val readSource: (String => Either[LizpError, String]),
+  val parse: (String => Either[LizpError, List[Expr]]),
+  val expand: (List[Expr] => Either[LizpError, List[Expr]]),
+  val optimize: (List[Expr] => Either[LizpError, List[Expr]])
+):
+
   val natives: mutable.Map[Sym, Definition] = {
     val scope = mutable.Map[Sym, Definition]()
     native.all
