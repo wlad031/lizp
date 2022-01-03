@@ -11,8 +11,10 @@ Lizp is also an interpreter for this language written in Scala.
 
 #### Fibonacci numbers
 ```
-(def (fib n)
-  (def (iter i a b)
+(include "std/std.lz")
+
+(def fib [n]
+  (def iter [i a b]
     (if (< i n) 
         (iter (+ i 1) b (+ a b))
         a))
@@ -34,6 +36,8 @@ Outputs:
 
 ### Language syntax
 
+Bracket pairs `()`, `[]` and `{}` are interchangeable, but all expressions must keep bracket-balance.
+
 #### Constants
 ```
 (val hello "Hello")
@@ -43,7 +47,7 @@ Outputs:
 
 ##### Definition
 ```
-(def (greeting name) (println hello name))
+(def greeting [name] (println hello name))
 ```
 
 #### Calling
@@ -58,12 +62,20 @@ Outputs:
 
 #### Lambda (anonymous functions)
 ```
-(def (foo f a b) (f a b))
+(def foo [f a b] (f a b))
 
-(foo (lambda (x y) (+ x y)) 10 20)
-(foo (lambda (x y) (* x y)) 10 20)
-(foo (lambda (x y) (/ y x)) 10 20)
+(foo (lambda [x y] (+ x y)) 10 20)
+(foo (lambda [x y] (* x y)) 10 20)
+(foo (lambda [x y] (/ y x)) 10 20)
 ```
+
+### Including
+```
+(include "path/to/another/script.lz")
+```
+
+All standard definitions are located in `std/std.lz` (including `+`, `println` and other simple functions!), so you should put `(include "std/std.lz")` into almost any program.
+
 
 ### Features
 

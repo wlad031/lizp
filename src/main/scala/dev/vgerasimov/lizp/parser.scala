@@ -18,7 +18,7 @@ private def expand(expression: Expr): Either[LizpError, Expr] =
     case ref: Sym                                   => Call(ref).asRight
     case LList(Sym("native") :: (ref: Sym) :: Nil)  => NativeFunc(ref, null).asRight
     case LList(Sym("include") :: LStr(file) :: Nil) => Include(file).asRight
-    case LList(Sym("def") :: LList((name: Sym) :: params) :: body) =>
+    case LList(Sym("def") :: (name: Sym) :: LList(params) :: body) =>
       body
         .map(expand)
         .partitionToEither
@@ -49,7 +49,7 @@ private def expand(expression: Expr): Either[LizpError, Expr] =
 
 private object Parser:
   private val sym: P[Sym] =
-    ((alphaNum | anyFrom("-_+*#@!?^\\|;:.,~/=<>%$")).! ~ until(anyFrom(" \t\r\n()")).!)
+    ((alphaNum | anyFrom("-_+*#@!?^\\|;:.,~/=<>%$")).! ~ until(anyFrom(" \t\r\n()[]{}")).!)
       .map({ case (head, tail) => Sym(head + tail) })
 
   private val lNull: P[LNull.type] = P("null").map(_ => LNull)
@@ -69,7 +69,15 @@ private object Parser:
 
   //noinspection ForwardReference
   private val lList: P[LList] =
-    P(P("(") ~~ expr.rep(sep = ws1) ~~ P(')')).map(LList(_))
+    P(
+      (anyFrom("([{") ~ ws0).!.flatMap(bracket =>
+        expr.rep(sep = ws1) ~~ P(bracket match {
+          case "(" => ")"
+          case "[" => "]"
+          case "{" => "}"
+        })
+      ).map(LList(_))
+    )
 
   private val expr: P[Expr] =
     P(choice(lNull, lBool, lNum, lStr, sym, lList))
