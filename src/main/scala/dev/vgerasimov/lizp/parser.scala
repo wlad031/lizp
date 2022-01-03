@@ -14,32 +14,32 @@ def expand(expressions: List[Expr]): Either[LizpError, List[Expr]] =
 //noinspection ScalaUnnecessaryParentheses
 private def expand(expression: Expr): Either[LizpError, Expr] =
   expression match
-    case literal: Literal                           => literal.asRight
-    case ref: Sym                                   => Call(ref).asRight
-    case LList(Sym("native") :: (ref: Sym) :: Nil)  => NativeFunc(ref, null).asRight
-    case LList(Sym("include") :: LStr(file) :: Nil) => Include(file).asRight
-    case LList(Sym("def") :: (name: Sym) :: LList(params) :: body) =>
-      body
+    case literal: Literal                       => literal.asRight
+    case ref: Sym                               => Call(ref).asRight
+    case Sym("native") :+: (ref: Sym) :+: LNil  => NativeFunc(ref, null).asRight
+    case Sym("include") :+: LStr(file) :+: LNil => Include(file).asRight
+    case Sym("def") :+: (name: Sym) :+: (params: LList) :+: body =>
+      body.toScala
         .map(expand)
         .partitionToEither
-        .map(Func(name, params.map(_.asInstanceOf[Sym]).map(FuncParam(_)), _))
+        .map(Func(name, params.toScala.map(_.asInstanceOf[Sym]).map(FuncParam(_)), _))
         .mapLeft(LizpError.Multi.apply)
-    case LList(Sym("val") :: (name: Sym) :: body :: Nil) =>
+    case Sym("val") :+: (name: Sym) :+: body :+: LNil =>
       expand(body).map(Const(name, _))
-    case LList(Sym("lambda") :: LList(params) :: body) =>
-      body
+    case Sym("lambda") :+: (params: LList) :+: body =>
+      body.toScala
         .map(expand)
         .partitionToEither
-        .map(Lambda(params.map(_.asInstanceOf[Sym]).map(FuncParam(_)), _))
+        .map(Lambda(params.toScala.map(_.asInstanceOf[Sym]).map(FuncParam(_)), _))
         .mapLeft(LizpError.Multi.apply)
-    case LList(Sym("if") :: condition :: thenExpression :: elseExpression :: Nil) =>
+    case Sym("if") :+: condition :+: thenExpression :+: elseExpression :+: LNil =>
       for {
         cond     <- expand(condition)
         thenExpr <- expand(thenExpression)
         elseExpr <- expand(elseExpression)
       } yield If(cond, thenExpr, elseExpr)
-    case LList((ref: Sym) :: args) =>
-      args
+    case (ref: Sym) :+: args =>
+      args.toScala
         .map(expand)
         .partitionToEither
         .map(Call(ref, _))
@@ -76,7 +76,7 @@ private object Parser:
           case "[" => "]"
           case "{" => "}"
         })
-      ).map(LList(_))
+      ).map(_.foldRight[LList](LNil)(_ :+: _))
     )
 
   private val expr: P[Expr] =

@@ -1,5 +1,7 @@
 package dev.vgerasimov.lizp
 
+import scala.annotation.tailrec
+
 sealed trait Expr
 
 case class Sym(value: String) extends Expr
@@ -11,7 +13,14 @@ case class LBool(value: Boolean) extends Expr
 case class LNum(value: BigDecimal) extends Expr
 case class LStr(value: String) extends Expr
 
-case class LList(value: List[Expr]) extends Expr
+sealed trait LList extends Expr:
+  def :+: (expr: Expr): LList = new :+:(expr, this)
+  def toScala: List[Expr] = this match
+    case LNil          => Nil
+    case head :+: tail => head :: tail.toScala
+
+case object LNil extends LList
+case class :+:(head: Expr, tail: LList) extends LList
 
 case class Call(ref: Sym, args: List[Expr] = Nil) extends Expr
 

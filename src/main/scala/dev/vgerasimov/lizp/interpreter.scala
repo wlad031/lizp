@@ -45,9 +45,15 @@ def eval(scopes: Scopes, expressions: List[Expr], ctx: Context): Either[LizpErro
 
   expressions
     .map({
-      case literal: Literal   => literal.asRight
-      case lambda: Lambda     => lambda.asRight
-      case LList(expressions) => eval(localScope :: scopes, expressions, ctx).map(LList.apply)
+      case literal: Literal => literal.asRight
+      case lambda: Lambda   => lambda.asRight
+      case LNil             => LNil.asRight
+      case head :+: tail =>
+        val newScopes = localScope :: scopes
+        for {
+          evaluatedHead <- eval(newScopes, List(head), ctx).map(_.last)
+          evaluatedTail <- eval(newScopes, List(tail), ctx).map(_.last)
+        } yield evaluatedHead :+: evaluatedTail.asInstanceOf[LList]
       case definition: Definition =>
         definition match
           case func @ NativeFunc(name, _) =>

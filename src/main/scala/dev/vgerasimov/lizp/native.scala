@@ -31,7 +31,7 @@ private[lizp] object native:
     name,
     ls => {
       val arg = ls(0)
-      if (func.isDefinedAt(arg)) List(func(arg)) else throw new WrongArgumentTypes(Nil, Nil) // FIXME: error args
+      if (func.isDefinedAt(arg)) List(func(arg)) else throw WrongArgumentTypes(Nil, Nil) // FIXME: error args
     }
   )
 
@@ -39,16 +39,16 @@ private[lizp] object native:
     name,
     ls => {
       val arg = (ls(0), ls(1))
-      if (func.isDefinedAt(arg)) List(func(arg)) else throw new WrongArgumentTypes(Nil, Nil) // FIXME: error args
+      if (func.isDefinedAt(arg)) List(func(arg)) else throw WrongArgumentTypes(Nil, Nil) // FIXME: error args
     }
   )
 
-  val nil = Const("nil", LList(Nil))
+  val nil = Const("nil", LNil)
 
 // format: off
-  val head = in1out1("head", { case LList(ls) => ls.head })
-  val tail = in1out1("tail", { case LList(ls) => LList(ls.tail) })
-  val list = NativeFunc("list", ls => List(LList(ls)))
+  val head = in1out1("head", { case head :+: tail => head })
+  val tail = in1out1("tail", { case head :+: tail => tail })
+  val list = NativeFunc("list", ls => List(ls.foldRight[LList](LNil)(_ :+: _)))
   val not = in1out1("not", { case LBool(a) => LBool(!a) })
 
   val greaterOrEqual = in2out1(">=",  { case (LNum(a), LNum(b)) => LBool(a >= b) })
@@ -76,13 +76,14 @@ private[lizp] object native:
           case LBool(x) => f(x)
           case LNum(x)  => f(x)
           case LStr(x)  => f(x)
-          case LList(ls) =>
-            f("'(");
-            ls.foreach { x =>
-              f(x); f(", ")
-            }; f(")")
-            println()
-            LUnit
+          case LNil     => f("nil")
+//          case LList(ls) =>
+//            f("'(");
+//            ls.foreach { x =>
+//              f(x); f(", ")
+//            }; f(")")
+//            println()
+//            LUnit
           case Call(id, _)       => f(s"call: $id")
           case Func(id, _, _)    => f(s"func: $id")
           case NativeFunc(id, _) => f(s"native func: $id")
