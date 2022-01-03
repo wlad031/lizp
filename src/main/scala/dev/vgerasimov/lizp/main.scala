@@ -11,7 +11,7 @@ import dev.vgerasimov.lizp.syntax.*
     optimizedExpressions <- optimize(expandedExpressions)
     result <- {
       val ctx = new Context(readScript, parse, expand, optimize)
-      eval(List(ctx.natives), optimizedExpressions, ctx)
+      eval(Nil, optimizedExpressions, ctx)
     }
   } yield result) match
     case Left(error) =>

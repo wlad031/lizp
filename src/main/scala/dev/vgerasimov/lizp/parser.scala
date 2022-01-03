@@ -1,29 +1,29 @@
 package dev.vgerasimov.lizp
 
-import dev.vgerasimov.slowparse.*
-import dev.vgerasimov.slowparse.P
-import dev.vgerasimov.slowparse.Parsers.*
-import dev.vgerasimov.slowparse.Parsers.given
-
 import dev.vgerasimov.lizp.syntax.*
+import dev.vgerasimov.slowparse.*
+import dev.vgerasimov.slowparse.Parsers.{ *, given }
+
 import scala.util.Random
 
 def parse(string: String): Either[ParsingError, List[Expr]] = Parser.apply(string)
 
 def expand(expressions: List[Expr]): Either[LizpError, List[Expr]] =
-  expressions.map(expand).partitionToEither.mapLeft(LizpError.Multi(_))
+  expressions.map(expand).partitionToEither.mapLeft(LizpError.Multi.apply)
 
+//noinspection ScalaUnnecessaryParentheses
 private def expand(expression: Expr): Either[LizpError, Expr] =
   expression match
     case literal: Literal                           => literal.asRight
     case ref: Sym                                   => Call(ref).asRight
+    case LList(Sym("native") :: (ref: Sym) :: Nil)  => NativeFunc(ref, null).asRight
     case LList(Sym("include") :: LStr(file) :: Nil) => Include(file).asRight
     case LList(Sym("def") :: LList((name: Sym) :: params) :: body) =>
       body
         .map(expand)
         .partitionToEither
         .map(Func(name, params.map(_.asInstanceOf[Sym]).map(FuncParam(_)), _))
-        .mapLeft(LizpError.Multi(_))
+        .mapLeft(LizpError.Multi.apply)
     case LList(Sym("val") :: (name: Sym) :: body :: Nil) =>
       expand(body).map(Const(name, _))
     case LList(Sym("lambda") :: LList(params) :: body) =>
@@ -31,7 +31,7 @@ private def expand(expression: Expr): Either[LizpError, Expr] =
         .map(expand)
         .partitionToEither
         .map(Lambda(params.map(_.asInstanceOf[Sym]).map(FuncParam(_)), _))
-        .mapLeft(LizpError.Multi(_))
+        .mapLeft(LizpError.Multi.apply)
     case LList(Sym("if") :: condition :: thenExpression :: elseExpression :: Nil) =>
       for {
         cond     <- expand(condition)
@@ -43,7 +43,7 @@ private def expand(expression: Expr): Either[LizpError, Expr] =
         .map(expand)
         .partitionToEither
         .map(Call(ref, _))
-        .mapLeft(LizpError.Multi(_))
+        .mapLeft(LizpError.Multi.apply)
     case list: LList => list.asRight
     case expression  => ExpansionError(s"Unexpected expression: $expression").asLeft
 
@@ -67,6 +67,7 @@ private object Parser:
 
   private val lStr: P[LStr] = (P("\"") ~ until(P("\"")).! ~ P("\"")).map(LStr(_))
 
+  //noinspection ForwardReference
   private val lList: P[LList] =
     P(P("(") ~~ expr.rep(sep = ws1) ~~ P(')')).map(LList(_))
 

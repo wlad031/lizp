@@ -1,3 +1,22 @@
+(native +)
+(native -)
+(native *)
+(native /)
+
+(native =)
+(native !=)
+(native >)
+(native >=)
+(native <)
+(native <=)
+
+(native not)
+
+(native head)
+(native tail)
+(native list)
+(native nil)
+
 (def (nth ls n)
   (def (iter i x xs)
     (if (= i n) x (iter (+ i 1) (head xs) (tail xs))))
