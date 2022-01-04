@@ -8,7 +8,7 @@ private[lizp] object native:
 
   import ExecutionError.*
 
-  lazy val all: List[Definition] = List(
+  lazy val all: List[Def] = List(
     nil,
     list,
     head,
@@ -27,28 +27,30 @@ private[lizp] object native:
     printlnFunc
   )
 
-  private def in1out1(name: String, func: PartialFunction[Expr, Expr]) = NativeFunc(
+  private def in1out1(name: String, func: PartialFunction[Expr, Expr]): Def = Def(
     name,
-    ls => {
+    NativeFunc(ls => {
       val arg = ls(0)
-      if (func.isDefinedAt(arg)) List(func(arg)) else throw WrongArgumentTypes(Nil, Nil) // FIXME: error args
-    }
+      if (func.isDefinedAt(arg)) List(func(arg))
+      else throw WrongArgumentTypes(s"""Function "$name" is not defined for the argument "$arg"""") // FIXME: error args
+    })
   )
 
-  private def in2out1(name: String, func: PartialFunction[(Expr, Expr), Expr]) = NativeFunc(
+  private def in2out1(name: String, func: PartialFunction[(Expr, Expr), Expr]): Def = Def(
     name,
-    ls => {
+    NativeFunc(ls => {
       val arg = (ls(0), ls(1))
-      if (func.isDefinedAt(arg)) List(func(arg)) else throw WrongArgumentTypes(Nil, Nil) // FIXME: error args
-    }
+      if (func.isDefinedAt(arg)) List(func(arg))
+      else throw WrongArgumentTypes(s"""Function "$name" is not defined for the argument "$arg"""") // FIXME: error args
+    })
   )
 
-  val nil = Const("nil", LNil)
+  val nil = Def("nil", LNil)
 
 // format: off
   val head = in1out1("head", { case head :+: tail => head })
   val tail = in1out1("tail", { case head :+: tail => tail })
-  val list = NativeFunc("list", ls => List(ls.foldRight[LList](LNil)(_ :+: _)))
+  val list = Def("list", NativeFunc(ls => List(ls.foldRight[LList](LNil)(_ :+: _))))
   val not = in1out1("not", { case LBool(a) => LBool(!a) })
 
   val greaterOrEqual = in2out1(">=",  { case (LNum(a), LNum(b)) => LBool(a >= b) })
@@ -63,9 +65,9 @@ private[lizp] object native:
   val minus          = in2out1("-",   { case (LNum(a), LNum(b)) => LNum(a - b) })
   val divide         = in2out1("/",   { case (LNum(a), LNum(b)) => LNum(a / b) })
 // format: on
-  val printlnFunc = NativeFunc(
+  val printlnFunc = Def(
     "println",
-    ls =>
+    NativeFunc(ls =>
       List({
         def f(a: Any): LUnit.type =
           println(a)
@@ -84,12 +86,10 @@ private[lizp] object native:
 //            }; f(")")
 //            println()
 //            LUnit
-          case Call(id, _)       => f(s"call: $id")
-          case Func(id, _, _)    => f(s"func: $id")
-          case NativeFunc(id, _) => f(s"native func: $id")
-          case Const(id, _)      => f(s"var: $id")
-          case Redef(id, _)      => f(s"var redef: $id")
-          case _: If             => f("if-then-else expression")
-          case _: While          => f("unsafe while statement")
+          case Application(id, _) => f(s"call: $id")
+          case Def(id, _)         => f(s"ref: $id")
+          case _: If              => f("if-then-else expression")
+          case _: While           => f("unsafe while statement")
       })
+    )
   )

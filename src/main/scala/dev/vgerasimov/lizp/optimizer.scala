@@ -5,14 +5,14 @@ import dev.vgerasimov.lizp.syntax.*
 def optimize(expressions: List[Expr]): Either[LizpError, List[Expr]] =
   expressions
     .map({
-      case f @ Func(id, params, body) =>
+      case f @ Def(id, Lambda(params, body)) =>
         body.last match
-          case If(cond, Call(callId, args), elseExpr) if id == callId =>
+          case If(cond, Application(callId, args), elseExpr) if id == callId =>
             optimizeTailRecFunc(id, params, args, cond, elseExpr).asRight
-          case If(cond, thenExpr, Call(callId, args)) if id == callId =>
-            optimizeTailRecFunc(id, params, args, Call(Sym("not"), List(cond)), thenExpr).asRight
+          case If(cond, thenExpr, Application(callId, args)) if id == callId =>
+            optimizeTailRecFunc(id, params, args, Application(Sym("not"), List(cond)), thenExpr).asRight
           case _ =>
-            optimize(body).map(Func(id, params, _))
+            optimize(body).map(expressions => Def(id, Lambda(params, expressions)))
       case expr => expr.asRight
     })
     .partitionToEither
@@ -23,10 +23,10 @@ private def optimizeTailRecFunc(id: Sym, params: List[FuncParam], args: List[Exp
     case (p, a) => {
       val id = Sym(s"${p.name.value}${'$'}0")
       (
-        Const(id, LUnit),
-        Redef(id, a),
-        Redef(p.name, Call(id))
+        Def(id, LUnit),
+        Def(id, Redef(a)),
+        Def(p.name, Redef(Application(id, Nil)))
       )
     }
   })
-  Func(id, params, ls.map(_._1) ++ List(While(cond, ls.map(_._2) ++ ls.map(_._3)), result))
+  Def(id, Lambda(params, ls.map(_._1) ++ List(While(cond, ls.map(_._2) ++ ls.map(_._3)), result)))

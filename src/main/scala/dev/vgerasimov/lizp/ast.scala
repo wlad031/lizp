@@ -22,12 +22,11 @@ sealed trait LList extends Expr:
 case object LNil extends LList
 case class :+:(head: Expr, tail: LList) extends LList
 
-case class Call(ref: Sym, args: List[Expr] = Nil) extends Expr
+case class Application(ref: Sym, args: List[Expr]) extends Expr
+case class Def(ref: Sym, expression: Expr) extends Expr
 
-case class NativeFunc(name: Sym, func: List[Expr] => List[Expr]) extends Expr
-case class Func(name: Sym, params: List[FuncParam], body: List[Expr]) extends Expr
-case class Const(name: Sym, expression: Expr) extends Expr
-case class Redef(ref: Sym, expression: Expr) extends Expr
+case class NativeFunc(func: List[Expr] => List[Expr]) extends Expr
+case class Redef(expression: Expr) extends Expr
 case class Lambda(params: List[FuncParam], body: List[Expr]) extends Expr
 
 case class Include(file: String) extends Expr
@@ -38,10 +37,8 @@ sealed trait Unsafe extends Expr
 case class While(condition: Expr, sideEffects: List[Expr]) extends Unsafe
 
 type Literal = LNull.type | LUnit.type | LBool | LNum | LStr
-type Definition = Const | Func | NativeFunc | Redef
 
 case class FuncParam(name: Sym, isLazy: Boolean = false)
 
-extension (call: Call) def toString: String = s"""Call($call.ref, ${call.args.mkString(",")})"""
-extension (func: Func) def toString: String = s"Func($func.name, $func.params, $func.body)"
+extension (call: Application) def toString: String = s"""Call($call.ref, ${call.args.mkString(",")})"""
 extension (funcParam: FuncParam) def toLazy: FuncParam = funcParam.copy(isLazy = true)

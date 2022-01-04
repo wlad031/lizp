@@ -15,17 +15,19 @@ def expand(expressions: List[Expr]): Either[LizpError, List[Expr]] =
 private def expand(expression: Expr): Either[LizpError, Expr] =
   expression match
     case literal: Literal                       => literal.asRight
-    case ref: Sym                               => Call(ref).asRight
-    case Sym("native") :+: (ref: Sym) :+: LNil  => NativeFunc(ref, null).asRight
+    case ref: Sym                               => Application(ref, Nil).asRight
+    case Sym("native") :+: (ref: Sym) :+: LNil  => Def(ref, NativeFunc(null)).asRight
     case Sym("include") :+: LStr(file) :+: LNil => Include(file).asRight
     case Sym("def") :+: (name: Sym) :+: (params: LList) :+: body =>
       body.toScala
         .map(expand)
         .partitionToEither
-        .map(Func(name, params.toScala.map(_.asInstanceOf[Sym]).map(FuncParam(_)), _))
+        .map(bodyExpressions =>
+          Def(name, Lambda(params.toScala.map(_.asInstanceOf[Sym]).map(FuncParam(_)), bodyExpressions))
+        )
         .mapLeft(LizpError.Multi.apply)
     case Sym("val") :+: (name: Sym) :+: body :+: LNil =>
-      expand(body).map(Const(name, _))
+      expand(body).map(Def(name, _))
     case Sym("lambda") :+: (params: LList) :+: body =>
       body.toScala
         .map(expand)
@@ -42,7 +44,7 @@ private def expand(expression: Expr): Either[LizpError, Expr] =
       args.toScala
         .map(expand)
         .partitionToEither
-        .map(Call(ref, _))
+        .map(Application(ref, _))
         .mapLeft(LizpError.Multi.apply)
     case list: LList => list.asRight
     case expression  => ExpansionError(s"Unexpected expression: $expression").asLeft
