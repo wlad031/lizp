@@ -73,7 +73,7 @@ private object Parser:
   private val lList: P[LList] =
     P(
       (anyFrom("([{") ~ ws0).!.flatMap(bracket =>
-        expr.rep(sep = ws1) ~~ P(bracket match {
+        expr.rep(sep = Some(ws1)) ~~ P(bracket match {
           case "(" => ")"
           case "[" => "]"
           case "{" => "}"
@@ -84,7 +84,7 @@ private object Parser:
   private val expr: P[Expr] =
     P(choice(lNull, lBool, lNum, lStr, sym, lList))
 
-  def apply(string: String): Either[ParsingError, List[Expr]] = (ws0 ~ expr.rep(sep = ws1) ~~ end)(string) match
+  def apply(string: String): Either[ParsingError, List[Expr]] = (ws0 ~ expr.rep(sep = Some(ws1)) ~~ end)(string) match
     case POut.Success(v, _, _, _)     => v.asRight
     case f @ POut.Failure(message, _) => ParsingError(message).asLeft
 
