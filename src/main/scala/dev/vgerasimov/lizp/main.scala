@@ -1,22 +1,41 @@
 package dev.vgerasimov.lizp
 
-import dev.vgerasimov.lizp.Parser.*
-import dev.vgerasimov.lizp.syntax.*
+import java.nio.file.{ Path, Paths }
 
-@main def run(files: String*) =
-  (for {
-    source               <- files.map(readScript).toList.partitionToEither.map(_.mkString("\n"))
-    parsedExpressions    <- parse(source)
-    expandedExpressions  <- expand(parsedExpressions)
-    optimizedExpressions <- optimize(expandedExpressions)
-    result <- {
-      val ctx = new Context(readScript, parse, expand, optimize)
-      eval(Nil, optimizedExpressions, ctx)
+import dev.vgerasimov.lizp.build.BuildInfo
+import dev.vgerasimov.lizp.renamings.PrefixLizpTypes.*
+import dev.vgerasimov.lizp.syntax.{ *, given }
+import dev.vgerasimov.lizp.types.Expr
+
+@main def run(args: String*) =
+  val result = for {
+    config <- ArgsParser()(args.toArray)
+    sourcePaths = Paths.get(".") :: config.sourcePaths.toList
+    reader = Reader()
+    read <- reader(config.file)(sourcePaths)
+    parser = Parser()
+    parsed <- parser(read)
+    context = Interpreter.Context(
+      reader = reader,
+      parser = parser,
+      sourcePaths = sourcePaths,
+      withNoNotes = config.verbosity == LizpConfig.Verbosity.Default
+    )
+    evaluated <- {
+      given Interpreter.Context = context
+      Interpreter()(parsed)
     }
-  } yield result) match
+  } yield evaluated
+
+  result match
     case Left(error) =>
       Console.err.println(s"""|Error:
                               |$error""".stripMargin)
-    case Right(result) =>
+      sys.exit(1)
+    case Right((exprs, _)) =>
       Console.out.println(s"""|Result:
-                              |${result.map(r => "> " + r.toString).mkString("\n")}""".stripMargin)
+                              |${exprs
+        .asInstanceOf[LizpList[Expr]]
+        .asScala
+        .map(r => "> " + r.toString)
+        .mkString("\n")}""".stripMargin)

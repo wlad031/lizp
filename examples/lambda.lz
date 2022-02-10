@@ -1,7 +1,5 @@
 (include "std/std.lz")
 
-(def foo [f a b] (f a b))
+(defn 'foo ['f 'a 'b] (f a b))
 
-(foo (lambda [x y] (+ x y)) 10 20)
-(foo (lambda [x y] (* x y)) 10 20)
-(foo (lambda [x y] (/ y x)) 10 20)
+(foo (fn ['x 'y] (+ x y)) 10 20)
