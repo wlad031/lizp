@@ -13,8 +13,8 @@ Lizp is also an interpreter for this language written in Scala.
 ```
 (include "std/std.lz")
 
-(def fib [n]
-  (def iter [i a b]
+(defn 'fib ['n]
+  (defn 'iter ['i 'a 'b]
     (if (< i n) 
         (iter (+ i 1) b (+ a b))
         a))
@@ -27,11 +27,11 @@ Lizp is also an interpreter for this language written in Scala.
 ```
 Outputs:
 ```
-> LUnit       // function definition returns Unit type
-> LNum(0)
-> LNum(1)
-> LNum(55)
-> LNum(354224848179261915075)
+> Nil       // function definition returns Nil type
+> 0
+> 1
+> 55
+> 354224848179261915075
 ```
 
 ### Language syntax
@@ -40,14 +40,14 @@ Bracket pairs `()`, `[]` and `{}` are interchangeable, but all expressions must 
 
 #### Constants
 ```
-(val hello "Hello")
+(def 'hello "Hello")
 ```
 
 #### Functions
 
 ##### Definition
 ```
-(def greeting [name] (println hello name))
+(defn 'greeting ['name] (println hello name))
 ```
 
 #### Calling
@@ -62,11 +62,9 @@ Bracket pairs `()`, `[]` and `{}` are interchangeable, but all expressions must 
 
 #### Lambda (anonymous functions)
 ```
-(def foo [f a b] (f a b))
+(defn 'foo ['f 'a 'b] (f a b))
 
-(foo (lambda [x y] (+ x y)) 10 20)
-(foo (lambda [x y] (* x y)) 10 20)
-(foo (lambda [x y] (/ y x)) 10 20)
+(foo (fn ['x 'y] (+ x y)) 10 20)
 ```
 
 ### Including
@@ -74,10 +72,10 @@ Bracket pairs `()`, `[]` and `{}` are interchangeable, but all expressions must 
 (include "path/to/another/script.lz")
 ```
 
-All standard definitions are located in `std/std.lz` (including `+`, `println` and other simple functions!), so you should put `(include "std/std.lz")` into almost any program.
+All standard definitions are located in `std/std.lz` (including macros `defn`, `defm`, etc.), so you may want put `(include "std/std.lz")` into almost any program.
 
 
 ### Features
 
-- [x] optimization for tail-recursive functions (for very simple ones, as, for example, `iter` from the example above)
+- [] optimization for tail-recursive functions (for very simple ones, as, for example, `iter` from the example above)
 
