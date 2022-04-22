@@ -24,16 +24,18 @@ object SlowparseParser extends Parser:
   import dev.vgerasimov.slowparse.*
   import dev.vgerasimov.slowparse.Parsers.{ *, given }
 
-  override def apply(string: String): Either[Parser.Error, Expr] = exprs(string) match
-    case POut.Success(result, _, _, _) => result.asRight
-    case POut.Failure(message, _)      => Parser.Error(message).asLeft
+  override def apply(string: String): Either[Parser.Error, Expr] = 
+    exprs(string) match
+      case POut.Success(result, _, _, _) => result.asRight
+      case POut.Failure(message, _)      => Parser.Error(message).asLeft
 
-  private val comment: P[Unit] = P(";") ~ until(eol)
+  private val comment: P[Unit] = P(!P("\\") ~ P(";") ~ until(eol | end))
 
   private val expr: P[Expr] = P(atom | sym | list)
   private val exprs: P[Expr] =
     import renamings.PrefixLizpTypes.*
-    (ws0 ~ expr.rep(sep = Some(ws1)) ~~ end).map({
+    val wsOrComments = (ws | comment).*.!!
+    (wsOrComments ~ expr.rep(sep = Some(wsOrComments)) ~~ (wsOrComments ~ end)).map({
       case Nil      => LizpNil
       case x :: Nil => x
       case list     => list.asLizp
@@ -42,7 +44,7 @@ object SlowparseParser extends Parser:
   private val atom: P[Atom] = P(choice(bool, num, str))
 
   private val sym: P[Sym] =
-    ((alphaNum | anyFrom("'-_+*#@!?^\\|;:.,~/=<>%$")).! ~ until(anyFrom(" \t\r\n()[]{}")).!)
+    ((alphaNum | anyFrom("'-_+*#@!?^\\|:.,~/=<>%$")).! ~ until(anyFrom(" \t\r\n()[]{}")).!)
       .map({ case (head, tail) => Sym(head + tail) })
 
   private val bool: P[Bool] = (P("true").! | P("false").!).map(_.toBoolean).map(Bool.apply)

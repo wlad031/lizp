@@ -19,3 +19,16 @@ class ParserTest extends LizpTestSuite(Parser()):
     Gen.asciiStr.filter(!_.contains("\"")).map(x => s""""$x"""") ->
     (s => Str(s.stripPrefix("\"").stripSuffix("\"")))
   }
+  testOne("empty string and trailing comment -> Nil") { "; hello" -> Nil }
+  testOne("""(1 "hello") and trailing comment -> List""") { """(1 "hello") ; comment""" -> List(Num(1), Str("hello")) }
+  testOne("""different comments""") {
+    """|;start
+       |(1 "hello") ; comment 1
+       |;comment 2 ("ignored")
+       |(foo x)
+       |; lol
+       |; the second
+       |(var)
+       |;end
+    """.stripMargin -> List(List(Num(1), Str("hello")), List(Sym("foo"), Sym("x")), List(Sym("var")))
+  }
