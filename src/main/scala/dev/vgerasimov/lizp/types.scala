@@ -12,11 +12,8 @@ object Keyword:
   case object Def extends Keyword
   case object List extends Keyword
   case object Eval extends Keyword
-  case object Lazy extends Keyword
   case object If extends Keyword
   case object Macro extends Keyword
-
-case class Lazy[+E <: Expr](expr: E) extends Expr
 
 case class Sym(value: String) extends Expr:
   override def toString: String = s"'$value" // TODO: get rid of it
@@ -27,10 +24,9 @@ object Sym:
   val Macro = Sym("macro")
   val List = Sym("list")
   val Eval = Sym("eval")
-  val Lazy = Sym("lazy")
   val If = Sym("if")
 
-sealed trait Param extends Expr:
+sealed trait Param:
   def sym: Sym
 
 object Param:
