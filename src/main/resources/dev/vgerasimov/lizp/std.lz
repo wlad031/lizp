@@ -1,0 +1,39 @@
+(def 'defm 
+  (macro ['name 'params 'body] 
+    (def name (macro params body))))
+(def 'defn 
+  (macro ['name 'params 'body] 
+    (def name (fn params body))))
+
+(defn '?nil ['x] (= x nil))
+(defn '?zero ['x] (= x 0))
+
+(defn 'inc ['x] (+ x 1))
+(defn 'dec ['x] (- x 1))
+
+(defn 'not ['x] (if x false true))
+(defm 'invert ['?predicate] (fn ['x] (not (?predicate x))))
+
+(defn 'nth ['n 'ls]
+  (last
+    (defn 'iter ['i 'ls]
+      (if (= i n)
+        (head ls)
+        (iter (inc i) (tail ls))))
+    (iter 0 ls)))
+
+(defn 'take-while ['?predicate 'ls]
+  (last
+    (defn 'iter ['ls 'res] 
+      (if (?nil ls) res
+        (if (?predicate (head ls)) 
+          (iter (tail ls) (list res (head ls))) 
+          res)))
+    (iter ls nil)))
+(defm 'take-until ['?predicate 'ls] 
+  (take-while (invert ?predicate) ls))
+
+(defm 'compose ['fn1 'fn2]
+  (fn ['x] (fn2 (fn1 x))))
+
+(def 'kek (fn ['a 'b] (+ a b)))

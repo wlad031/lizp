@@ -7,8 +7,10 @@ import dev.vgerasimov.lizp.syntax.{ *, given }
 
 case class LizpConfig(
   sourcePaths: Seq[Path] = Seq(),
+  expr: String = null,
   file: Path = null,
-  verbosity: LizpConfig.Verbosity = LizpConfig.Verbosity.Default
+  verbosity: LizpConfig.Verbosity = LizpConfig.Verbosity.Default,
+  isRepl: Boolean = false
 )
 
 object LizpConfig:
@@ -58,8 +60,15 @@ private object ScoptArgsParser extends ArgsParser:
             if (options.contains(s)) success else failure(s"Option --verbosity must be one of $options")
           })
           .action((x, c) => c.copy(verbosity = LizpConfig.verbosity(x).get)),
+        opt[String]('e', "eval")
+          .text("Expression to evaluate")
+          .optional()
+          .action((x, c) => c.copy(expr = x)),
+        cmd("repl")
+          .action((_, c) => c.copy(isRepl = true))
+          .text("Run REPL"),
         arg[Path]("<file>")
-          .unbounded()
+          .optional()
           .action((x, c) => c.copy(file = x))
           .text("Script to run")
       )
@@ -67,8 +76,11 @@ private object ScoptArgsParser extends ArgsParser:
 
     OParser.runParser(parser1, args, LizpConfig()) match
       case (result, effects) =>
+        OParser.runEffects(effects)
+
         result match
-          case Some(config) => config.asRight
+          case Some(config) =>
+            config.asRight
           case _ =>
             ArgsParser
               .Error(

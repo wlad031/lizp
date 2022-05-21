@@ -1,4 +1,4 @@
-(include "std/std.lz")
+(include std)
 
 (defn 'foo ['f 'a 'b] (f a b))
 

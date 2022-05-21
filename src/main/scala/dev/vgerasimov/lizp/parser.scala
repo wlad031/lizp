@@ -24,7 +24,7 @@ object SlowparseParser extends Parser:
   import dev.vgerasimov.slowparse.*
   import dev.vgerasimov.slowparse.Parsers.{ *, given }
 
-  override def apply(string: String): Either[Parser.Error, Expr] = 
+  override def apply(string: String): Either[Parser.Error, Expr] =
     exprs(string) match
       case POut.Success(result, _, _, _) => result.asRight
       case POut.Failure(message, _)      => Parser.Error(message).asLeft

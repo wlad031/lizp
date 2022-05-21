@@ -39,6 +39,11 @@ object syntax:
       case Left(a)  => Left(f(a))
       case Right(b) => Right(b)
 
+  extension [A](either: Either[A, A])
+    def unwrap: A = either match
+      case Left(a)  => a
+      case Right(a) => a
+
   extension [A, B](listEithers: List[Either[A, B]])
     def partitionToEither: Either[List[A], List[B]] = listEithers.partition(_.isLeft) match
       case (Nil, rights) => Right(rights.map(_.asInstanceOf[Right[?, B]].value))

@@ -6,8 +6,14 @@ import dev.vgerasimov.lizp.renamings.PrefixScalaTypes.*
 import dev.vgerasimov.lizp.syntax.*
 
 object InterpreterTest:
+  import java.nio.file.{ Paths }
   val underTest: Interpreter = Interpreter()
-  given ctx: Context = Context(debug = Context.DebugMode.None, parser = Parser())
+  given ctx: Context =
+    Context(
+      debug = Context.DebugMode.None,
+      parser = Parser(),
+      sourcePaths = Set(Source.resource("std.lz"), Source.directory("."))
+    )
 
 import InterpreterTest.{ given, * }
 

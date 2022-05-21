@@ -32,7 +32,7 @@ private object SimpleRepl extends Repl[Interpreter.Scopes]:
       var readChar = java.lang.System.in.read()
       var read = ""
       while (readChar != 13 && readChar != 10) {
-        java.lang.System.out.print(readChar)
+        // java.lang.System.out.print(readChar)
         read = read + readChar.toChar
         readChar = java.lang.System.in.read().toChar
       }
