@@ -157,6 +157,7 @@ val natives: Scope = Scope(
   fn(
     "+" -> ((params, scopes, _) =>
       params match {
+        case Nil => (Nil, scopes).asRight
         case (x: Num) :: Nil => (Fn(List.sym(Sym("arg")), List(Sym("+"), x, Sym("arg"))), scopes).asRight
         case (Num(x) :: tail) :: Nil =>
           tail.asScala
@@ -190,7 +191,8 @@ val natives: Scope = Scope(
             .asRight
             .map(Str.apply)
             .map((_, scopes))
-        case expr => s"""Native "+": unsupported parameters "$expr"""".asLeft
+        // TODO: TBH I don't understand why compiler thinks this is an unreachable statement
+        // case expr => s"""Native "+": unsupported parameters "$expr"""".asLeft
       }
     )
   ),
