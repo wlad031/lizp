@@ -10,7 +10,8 @@ trait Asserter[A] extends ((A, A) => Unit)
 trait LizpTestSuite[A, B](underTest: A => Either[LizpError, B]) extends munit.ScalaCheckSuite:
   export LizpTestSuite.*
 
-  given simpleAsserter[A]: Asserter[A] = (a, b) => assertEquals(a, b)
+  given [A] => Asserter[A]:
+    override def apply(a1: A, a2: A): Unit = assertEquals(a1, a2)
 
   val assertEquals = super.assertEquals
 
