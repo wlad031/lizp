@@ -169,8 +169,8 @@ val natives: Scope = Scope(
             .map((_, scopes))
         case (Str(x) :: tail) :: Nil =>
           tail.asScala
-            .map(_.toString)
-            // .map(_.value)
+            .map(_.asInstanceOf[Str])
+            .map(_.value)
             .foldLeft(x)(_ + _)
             .asRight
             .map(Str.apply)
@@ -185,8 +185,8 @@ val natives: Scope = Scope(
             .map((_, scopes))
         case Str(x) :: tail =>
           tail.asScala
-            .map(_.toString)
-            // .map(_.value)
+            .map(_.asInstanceOf[Str])
+            .map(_.value)
             .foldLeft(x)(_ + _)
             .asRight
             .map(Str.apply)

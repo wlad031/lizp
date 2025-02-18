@@ -23,12 +23,18 @@ class ParserTest extends LizpTestSuite(Parser()):
   testOne("""(1 "hello") and trailing comment -> List""") { """(1 "hello") ; comment""" -> List(Num(1), Str("hello")) }
   testOne("""different comments""") {
     """|;start
-       |(1 "hello") ; comment 1
+       |(1 "hello") ; comment 1.1
+       |(1 "hello" "world") ; comment 1.2
        |;comment 2 ("ignored")
        |(foo x)
        |; lol
        |; the second
        |(var)
        |;end
-    """.stripMargin -> List(List(Num(1), Str("hello")), List(Sym("foo"), Sym("x")), List(Sym("var")))
+    """.stripMargin -> List(
+      List(Num(1), Str("hello")),
+      List(Num(1), Str("hello"), Str("world")),
+      List(Sym("foo"), Sym("x")),
+      List(Sym("var"))
+    )
   }
