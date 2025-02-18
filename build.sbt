@@ -2,7 +2,7 @@ val root = project
   .enablePlugins(BuildInfoPlugin)
   .in(file("."))
   .settings(
-    scalaVersion := "3.1.2",
+    scalaVersion := "3.6.3",
     organization := "dev.vgerasimov",
     name := "lizp",
     version := "0.1.0",
