@@ -57,7 +57,7 @@ private object ScoptArgsParser extends ArgsParser:
           .optional()
           .validate(s => {
             val options = Set("notes", "default")
-            if (options.contains(s)) success else failure(s"Option --verbosity must be one of $options")
+            if options.contains(s) then success else failure(s"Option --verbosity must be one of $options")
           })
           .action((x, c) => c.copy(verbosity = LizpConfig.verbosity(x).get)),
         opt[String]('e', "eval")

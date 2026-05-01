@@ -12,13 +12,13 @@ object Repl:
   trait Handler[A] extends ((String, A) => (String, A))
 
   def lizpHandler(interpreter: Interpreter, context: Interpreter.Context): Handler[Interpreter.Scopes] = (cmd, ctx) =>
-    (for {
+    (for
       parsed <- context.parser(cmd)
       evaluated <- {
         given Interpreter.Context = context
         interpreter(parsed, ctx)
       }
-    } yield evaluated).map(p => (p._1.toString, p._2)).mapLeft(e => (e.toString, ctx)).unwrap
+    yield evaluated).map(p => (p._1.toString, p._2)).mapLeft(e => (e.toString, ctx)).unwrap
 
 private object SimpleRepl extends Repl[Interpreter.Scopes]:
   import scala.io.StdIn
@@ -26,12 +26,12 @@ private object SimpleRepl extends Repl[Interpreter.Scopes]:
   override def apply(handler: Repl.Handler[Interpreter.Scopes]): (Interpreter.Scopes => Unit) = ctx =>
     println("Welcome to the Lizp REPL")
     var c = ctx
-    while (true) {
+    while true do {
       print("> ")
       var index = 0
       var readChar = java.lang.System.in.read()
       var read = ""
-      while (readChar != 13 && readChar != 10) {
+      while readChar != 13 && readChar != 10 do {
         // java.lang.System.out.print(readChar)
         read = read + readChar.toChar
         readChar = java.lang.System.in.read().toChar

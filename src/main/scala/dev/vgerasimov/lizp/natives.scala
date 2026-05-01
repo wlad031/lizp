@@ -54,7 +54,7 @@ val natives: Scope = Scope(
     "include" -> ((params, scopes, ctx) =>
       params match
         case Str(path) :: Nil =>
-          if (ctx.included.contains(path)) (Note(s"""Already included "$path""""), scopes).asRight
+          if ctx.included.contains(path) then (Note(s"""Already included "$path""""), scopes).asRight
           else
             given implicitCtx: Context = ctx.copy(included = ctx.included + path)
             ctx.reader
@@ -62,7 +62,7 @@ val natives: Scope = Scope(
               .flatMap(ctx.parser)
               .flatMap(expr => ctx.interpreter.eval(expr, Scopes.withNatives))
               .map((_, newScopes) =>
-                ((if (ctx.withNoNotes) Nil else Note(s"""Included "$path"""")), scopes ++ newScopes)
+                ((if ctx.withNoNotes then Nil else Note(s"""Included "$path"""")), scopes ++ newScopes)
               )
               .mapLeft(readError => s"""
                 |Native "include"
@@ -191,8 +191,7 @@ val natives: Scope = Scope(
             .asRight
             .map(Str.apply)
             .map((_, scopes))
-        // TODO: TBH I don't understand why compiler thinks this is an unreachable statement
-        // case expr => s"""Native "+": unsupported parameters "$expr"""".asLeft
+        case expr => s"""Native "+": unsupported parameters "$expr"""".asLeft
       }
     )
   ),

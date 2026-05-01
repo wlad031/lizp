@@ -32,8 +32,8 @@ sealed trait Param:
 object Param:
   def apply(sym: Sym): Param =
     // TODO: refactor this
-    if (sym.value.startsWith("...")) Param.VarArg(Param(Sym(sym.value.substring(3))))
-    else if (!sym.value.startsWith(">")) Param.ByValue(sym)
+    if sym.value.startsWith("...") then Param.VarArg(Param(Sym(sym.value.substring(3))))
+    else if !sym.value.startsWith(">") then Param.ByValue(sym)
     else Param.ByName(Sym(sym.value.replace(">", "")))
 
   case class ByValue(override val sym: Sym) extends Param

@@ -102,7 +102,7 @@ private object InterpreterImpl extends Interpreter:
       case Sym.Macro      => (Keyword.Macro, scopes).asRight
       case sym @ Sym(ref) =>
         // TODO: refactor this
-        if (ref.startsWith("'")) (Sym(ref.substring(1)), scopes).asRight
+        if ref.startsWith("'") then (Sym(ref.substring(1)), scopes).asRight
         else eval(Deref(sym), scopes)
       case deref: Deref       => eval(Apply(deref, Nil), scopes)
       case deref: EvalOnDeref => (deref, scopes).asRight
@@ -117,7 +117,7 @@ private object InterpreterImpl extends Interpreter:
       case Apply(Nil, args) =>
         evalIndividually(args, scopes).map({ case (ls: List[?], x) => (Nil :: ls, x) })
       case Apply(note: Note, args) =>
-        evalIndividually(args, scopes).map({ case (ls: List[?], x) => ((if (ctx.withNoNotes) Nil else note) :: ls, x) })
+        evalIndividually(args, scopes).map({ case (ls: List[?], x) => ((if ctx.withNoNotes then Nil else note) :: ls, x) })
       case Apply((sym: Sym), args) =>
         evalIndividually(args, scopes).map({ case (ls: List[?], _) => (sym :: ls, scopes) })
       case Apply(Keyword.List, ls: List[?]) =>
@@ -125,7 +125,7 @@ private object InterpreterImpl extends Interpreter:
       case Apply(Keyword.If, cond :: thenExpr :: elseExpr :: Nil) =>
         eval(cond, scopes)
           .flatMap({
-            case (eCond: Bool, _) => eval(if (eCond.value) thenExpr else elseExpr, scopes)
+            case (eCond: Bool, _) => eval(if eCond.value then thenExpr else elseExpr, scopes)
             case _                => sys.error("some error") // TODO: implement this
           })
 
@@ -133,7 +133,7 @@ private object InterpreterImpl extends Interpreter:
         eval(list, scopes)
           .flatMap({
             case ((eSym: Sym) :: (eExpr: Expr) :: Nil, _) =>
-              ((if (ctx.withNoNotes) Nil else Note(s"""Defined "${eSym.value}"""")), scopes.put(eSym, eExpr)).asRight
+              ((if ctx.withNoNotes then Nil else Note(s"""Defined "${eSym.value}"""")), scopes.put(eSym, eExpr)).asRight
             case _ => Error.InvalidExpression(defExpr).asLeft
           })
 
@@ -179,9 +179,9 @@ private object InterpreterImpl extends Interpreter:
 
       case Apply(fn @ Fn(syms, body), args) =>
         // fn has some parameters, but no arguments provided, so we return the same function as a result
-        if (args.size == 0 && syms.size > 0) (fn, scopes).asRight
+        if args.size == 0 && syms.size > 0 then (fn, scopes).asRight
         // fn has some parameters, but not enough arguments provided, so we build a lambda as a result
-        else if (args.size < syms.size) ??? // TODO: implement
+        else if args.size < syms.size then ??? // TODO: implement
         // fn has parameters and all required arguments are provided, we evaluate this function
         // and drop all extra arguments
         else

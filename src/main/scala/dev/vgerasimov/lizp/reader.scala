@@ -15,7 +15,7 @@ object Source:
   def file(path: Path): Source.File = new Source.File(path)
   def directory(path: Path): Source.Directory = new Source.Directory(path)
   def directory(path: String): Source.Directory = directory(Paths.get(path))
-  def apply(path: Path): Source = if (path.toFile.isFile) file(path) else directory(path)
+  def apply(path: Path): Source = if path.toFile.isFile then file(path) else directory(path)
 
   class Resource private[Source] (name: String) extends Source:
     import java.io.FileOutputStream
@@ -23,7 +23,7 @@ object Source:
     private lazy val content = new String(classOf[Reader].getResourceAsStream(name).readAllBytes())
 
     override def tryRead(toReadPath: Path): Option[String] =
-      if (toReadPath.normalize.equals(Paths.get(name))) Some(content)
+      if toReadPath.normalize.equals(Paths.get(name)) then Some(content)
       else None
 
     override val toString: String = s"Resource($name)"
@@ -41,7 +41,7 @@ object Source:
 
     override def tryRead(toReadPath: Path): Option[String] =
       val resolved = path.resolve(toReadPath)
-      if (!Files.exists(resolved)) None
+      if !Files.exists(resolved) then None
       else Some(Files.readString(resolved))
 
     override val toString: String = s"Directory($path)"
@@ -71,7 +71,7 @@ object Reader:
 /** Simple [[Reader]] implementation using [[java.nio.file]] functionality. */
 private object ReaderImpl extends Reader:
   override def apply(path: Path)(sourcePath: SourcePath): Either[Reader.Error, String] =
-    if (path.isAbsolute)
+    if path.isAbsolute then
       Some(path)
         .filter(Files.exists(_))
         .map(Files.readString)
