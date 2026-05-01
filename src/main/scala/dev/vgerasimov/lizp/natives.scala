@@ -155,6 +155,19 @@ val natives: Scope = Scope(
   compare(">", _ > _, _ > _, _ > _),
   compare(">=", _ >= _, _ >= _, _ >= _),
   fn(
+    "concat" -> ((params, scopes, _) =>
+      val result = params.asScala.map {
+        case Str(value)  => value
+        case Sym(value)  => value
+        case Num(value)  => value.toString
+        case Bool(value) => value.toString
+        case Nil         => ""
+        case other       => other.toString
+      }.mkString
+      Str(result).asRight.map((_, scopes))
+    )
+  ),
+  fn(
     "+" -> ((params, scopes, _) =>
       params match {
         case Nil => (Nil, scopes).asRight

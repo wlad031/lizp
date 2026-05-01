@@ -10,7 +10,6 @@
 
 (defn 'inc ['x] (+ x 1))
 (defn 'dec ['x] (- x 1))
-(def 'concat +)
 
 (defn 'not ['x] (if x false true))
 (defm 'invert ['?predicate] (fn ['x] (not (?predicate x))))

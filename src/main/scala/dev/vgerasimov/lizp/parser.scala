@@ -61,7 +61,20 @@ object SlowparseParser extends Parser:
       })
       .map(Num.apply)
 
-  private val str: P[Str] = (P("\"") ~ until(P("\"")).! ~ P("\"")).map(Str.apply)
+  private val escapedStringChar: P[String] =
+    (P("\\") ~ anyChar).!.map {
+      case "\\n"  => "\n"
+      case "\\r"  => "\r"
+      case "\\t"  => "\t"
+      case "\\\"" => "\""
+      case "\\\\" => "\\"
+      case other     => other.drop(1)
+    }
+
+  private val plainStringChar: P[String] = (!P("\"") ~ anyChar).!
+
+  private val str: P[Str] =
+    (P("\"") ~ (escapedStringChar | plainStringChar).rep().map(_.mkString) ~ P("\"")).map(Str.apply)
 
   private val list: P[List[Expr]] =
     P(

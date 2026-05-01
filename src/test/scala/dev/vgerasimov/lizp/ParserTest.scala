@@ -8,7 +8,7 @@ import org.scalacheck.Prop.*
 class ParserTest extends LizpTestSuite(Parser()):
 
   testOne("empty string -> Nil") { "" -> Nil }
-  testGen("spaces only -> Nil") { Gen.stringOf(Gen.oneOf(" \r\t\n".toCharArray)) -> (_ => Nil) }
+  testGen("spaces only -> Nil") { Gen.stringOf(Gen.oneOf(" \r\t\n".toCharArray.toIndexedSeq)) -> (_ => Nil) }
   testGen("num string -> Num") { Gen.numStr.filter(_.nonEmpty) -> (s => Num(BigDecimal(s))) }
   testGen("(num string) -> (Num)") {
     Gen.numStr.filter(_.nonEmpty).map(v => s"($v)") ->
@@ -16,8 +16,14 @@ class ParserTest extends LizpTestSuite(Parser()):
   }
   testGen("boolean -> Bool") { oneOf("true", "false") -> (s => Bool(s.toBoolean)) }
   testGen("quoted string -> Str") {
-    Gen.asciiStr.filter(!_.contains("\"")).map(x => s""""$x"""") ->
-    (s => Str(s.stripPrefix("\"").stripSuffix("\"")))
+    Gen.asciiStr
+      .filter(s => !s.contains("\"") && !s.contains("\\"))
+      .map(x => s"\"$x\"") ->
+      (s => Str(s.stripPrefix("\"").stripSuffix("\"")))
+  }
+  testOne("quoted string supports escape sequences") {
+    "\"line1\\nline2 with \\\"quotes\\\" and \\\\ slash\"" ->
+      Str("line1\nline2 with \"quotes\" and \\ slash")
   }
   testOne("empty string and trailing comment -> Nil") { "; hello" -> Nil }
   testOne("""(1 "hello") and trailing comment -> List""") { """(1 "hello") ; comment""" -> List(Num(1), Str("hello")) }
