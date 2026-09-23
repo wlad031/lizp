@@ -1,3 +1,10 @@
+val giteaMaven = "https://gitea.local.vgerasimov.dev/api/packages/wlad031/maven"
+val artifactVersion = sys.env.getOrElse("VERSION", "0.1.4-SNAPSHOT")
+val giteaCredentials = for {
+  username <- sys.env.get("GITEA_USERNAME")
+  token <- sys.env.get("GITEA_TOKEN")
+} yield Credentials("Gitea API", "gitea.local.vgerasimov.dev", username, token)
+
 val root = project
   .enablePlugins(BuildInfoPlugin)
   .in(file("."))
@@ -5,11 +12,11 @@ val root = project
     scalaVersion := "3.8.3",
     organization := "dev.vgerasimov",
     name := "lizp",
-    version := "0.1.4",
-    githubOwner := "wlad031",
-    githubRepository := "lizp",
-    resolvers += Resolver.file("local-md4s-m2", file("/home/admin/Projects/md4s/local-m2"))(Resolver.mavenStylePatterns),
-    resolvers += Resolver.githubPackages("wlad031"),
+    version := artifactVersion,
+    resolvers += "gitea" at giteaMaven,
+    publishTo := Some("gitea" at giteaMaven),
+    publishMavenStyle := true,
+    credentials ++= giteaCredentials,
     scalacOptions ++= Seq(
       "-rewrite",
       "-source", "future",
